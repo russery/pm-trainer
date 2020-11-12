@@ -1,8 +1,12 @@
 """
+Handles interactions with ANT+ heartrate and power meter sensors.
 
+Connects to the sensors, and provides callbacks to the python-ant library
+for each type of device. Outputs heartrate, power, and cadence data.
+
+Class: 
+    AntSensors()
 """
-
-import time
 
 from ant.core import driver
 from ant.core.node import Node, Network
@@ -12,8 +16,14 @@ from ant.plus.heartrate import HeartRate
 from ant.plus.power import BicyclePower
 
 class AntSensors():
-    """ANT+ Heartrate and Power Meter sensors"""
+    """
+    ANT+ Heartrate and Power Meter sensor handler
+    """
     def __init__(self):
+        """
+        Attaches to the ANT+ interface dongle, registers callbacks,
+        begins search for heartrate and power meter sensors.
+        """
         self.device = driver.USB2Driver()
         self.antnode = Node(self.device)
         self.antnode.start()
@@ -44,6 +54,10 @@ class AntSensors():
         self._power_event_count = None
     
     def close(self):
+        """
+        Safely closes down the dongle interface and releases resources
+        prior to exit.
+        """
         self.device_heart_rate.close()
         self.device_power_meter.close()
         self.antnode.stop()
@@ -74,27 +88,42 @@ class AntSensors():
 
     @property
     def heartrate_bpm(self):
+        """
+        Returns heartrate in beats per minute (BPM) or None if heartrate data are not
+        available or fresh.
+        """
         #TODO: check for stale data (if no update in xx sec, return None)
         return self._heartrate_bpm
 
     @property
     def power_W(self):
+        """
+        Returns power in Watts if available, or None if not available or fresh.
+        """
         #TODO: return calculated power from accumulated power if there are event_count gaps
         #TODO: check for stale data (if no update in xx sec, return None)
         return self._instantaneous_power_W
 
     @property
     def cadence_rpm(self):
+        """
+        Returns cadence in RPM if available or None if not available or fresh.
+        """
         #TODO: check for stale data (if no update in xx sec, return None)
         return self._cadence_rpm
 
 
-sensors = AntSensors()
-while True:
-    try:
-        time.sleep(0.25)
-        print("heartrate: {} power: {} cadence: {}".format(
-            sensors.heartrate_bpm, sensors.power_W, sensors.cadence_rpm))
-    except KeyboardInterrupt:
-        break
-sensors.close()
+if __name__ == "__main__":
+    import time
+
+    print("Attaching to ANT+ sensors...")
+
+    sensors = AntSensors()
+    while True:
+        try:
+            time.sleep(0.25)
+            print("heartrate: {} power: {} cadence: {}".format(
+                sensors.heartrate_bpm, sensors.power_W, sensors.cadence_rpm))
+        except KeyboardInterrupt:
+            break
+    sensors.close()
