@@ -4,6 +4,13 @@ Handles interactions with ANT+ heartrate and power meter sensors.
 Connects to the sensors, and provides callbacks to the python-ant library
 for each type of device. Outputs heartrate, power, and cadence data.
 
+Depends on python_ant from: https://github.com/bissont/python-ant
+Note that there are other forks available, but this one is the only
+one that seems to work.
+
+Also requires libopenusb or libusb to be installed:
+https://sourceforge.net/projects/openusb/files/libopenusb/libopenusb-1.1.16/
+
 Class: 
     AntSensors()
 """
@@ -19,7 +26,7 @@ class AntSensors():
     """
     ANT+ Heartrate and Power Meter sensor handler
     """
-    def __init__(self):
+    def __init__(self, search_timeout_sec=120):
         """
         Attaches to the ANT+ interface dongle, registers callbacks,
         begins search for heartrate and power meter sensors.
@@ -41,8 +48,8 @@ class AntSensors():
                          'onHeartRateData': self._on_heartrate_data,
                          'onChannelClosed': self._on_channel_closed,
                          'onSearchTimeout': self._on_search_timeout})
-        self.device_heart_rate.open()
-        self.device_power_meter.open()
+        self.device_heart_rate.open(searchTimeout=search_timeout_sec)
+        self.device_power_meter.open(searchTimeout=search_timeout_sec)
 
         # Heartrate fields
         self._heartrate_bpm = None
@@ -77,9 +84,9 @@ class AntSensors():
         print("Search timed out for {:s}".format(device.name))
         
     def _on_heartrate_data(self, computed_heartrate, event_time_ms, rr_interval_ms):
-        self.heartrate_bpm = computed_heartrate
-        self.rr_interval_ms = rr_interval_ms
-        
+        self._heartrate_bpm = computed_heartrate
+        self._rr_interval_ms = rr_interval_ms
+
     def _on_power_data(self, event_count, pedal_diff, pedal_power_ratio, cadence_rpm, accumulated_power_W, instantaneous_power_W):
         self._instantaneous_power_W = instantaneous_power_W
         self._cadence_rpm = cadence_rpm
