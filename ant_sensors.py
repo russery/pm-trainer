@@ -10,10 +10,8 @@ one that seems to work.
 
 Also requires libopenusb or libusb to be installed:
 https://sourceforge.net/projects/openusb/files/libopenusb/libopenusb-1.1.16/
-
-Class: 
-    AntSensors()
 """
+
 import sys
 from datetime import datetime as dt
 from enum import Enum
@@ -21,17 +19,23 @@ from enum import Enum
 from ant.core import driver, exceptions
 from ant.core.node import Node, Network
 from ant.core.constants import NETWORK_KEY_ANT_PLUS, NETWORK_NUMBER_PUBLIC
-from ant.plus.plus import DeviceProfile, ChannelState
+from ant.plus.plus import ChannelState
 from ant.plus.heartrate import HeartRate
 from ant.plus.power import BicyclePower
 
 class AntSensors():
+    """
+    ANT+ Heartrate and Power Meter sensor handler
+    """
     class SensorStatus():
         """
         Tracks the status of a sensor device, whether it's connected
         and if its data is fresh.
         """
         class State(Enum):
+            """
+            State of an ANT+ sensor
+            """
             NOTCONNECTED = 1
             CONNECTED = 2
             STALE = 3
@@ -57,32 +61,35 @@ class AntSensors():
                 SensorStatus.State representing current state
             """
             if not self._connected:
-                s = self.State.NOTCONNECTED
+                _s = self.State.NOTCONNECTED
             elif (self._last_seen_time and
                   (dt.now() - self._last_seen_time).total_seconds() > self._fresh_time_s):
-                s = self.State.STALE
+                _s = self.State.STALE
             else:
-                s = self.State.CONNECTED
-            return s
+                _s = self.State.CONNECTED
+            return _s
 
     class SensorError(Exception):
+        """
+        Exceptions for ANT+ sensors.
+        """
         class ErrorType(Enum):
+            """
+            Type of ANT+ sensor error
+            """
             UNKNOWN = 1
             USB = 2
             NODE = 3
             TIMEOUT = 4
         def __init__(self, expression=None, message="", err_type=ErrorType.UNKNOWN):
+            super().__init__(message)
             self.expression = expression
             self.message = message
             self.err_type = err_type
 
-    """
-    ANT+ Heartrate and Power Meter sensor handler
-    """
     def __init__(self, search_timeout_sec=120):
         """
-        Attaches to the ANT+ interface dongle, registers callbacks,
-        begins search for heartrate and power meter sensors.
+        Create Ant+ node, network, and initialize all attributes
         """
         self.search_timeout_sec = search_timeout_sec
         self.device = driver.USB2Driver()
@@ -95,25 +102,29 @@ class AntSensors():
                          'onPowerData': self._on_power_data,
                          'onChannelClosed': self._on_channel_closed,
                          'onSearchTimeout': self._on_search_timeout})
-        self._power_meter_status = AntSensors.SensorStatus(fresh_time_s=10)
+        self._power_meter_status = AntSensors.SensorStatus(fresh_time_s=2)
         self.device_heart_rate = HeartRate(self.antnode, self.network,
             callbacks = {'onDevicePaired': self._on_device_found,
                          'onHeartRateData': self._on_heartrate_data,
                          'onChannelClosed': self._on_channel_closed,
                          'onSearchTimeout': self._on_search_timeout})
-        self._heart_rate_status = AntSensors.SensorStatus(fresh_time_s=5)
+        self._heart_rate_status = AntSensors.SensorStatus(fresh_time_s=2)
         self._reconnect = True
         # Heartrate fields
         self._heartrate_bpm = None
         self._rr_interval_ms = None
         self._hr_event_time_ms = None
         # Power meter fields
-        self._instantaneous_power_W = None
+        self._instantaneous_power_watts = None
         self._cadence_rpm = None
-        self._accumulated_power_W = None
+        self._accumulated_power_watts = None
         self._power_event_count = None
     
     def connect(self):
+        """
+        Attaches to the ANT+ dongle and begins search for heartrate
+        and power meter sensors.
+        """
         try:
             self.antnode.start()
             self.antnode.setNetworkKey(NETWORK_NUMBER_PUBLIC, self.network)
@@ -130,9 +141,9 @@ class AntSensors():
         self._heartrate_bpm = None
         self._rr_interval_ms = None
         self._hr_event_time_ms = None
-        self._instantaneous_power_W = None
+        self._instantaneous_power_watts = None
         self._cadence_rpm = None
-        self._accumulated_power_W = None
+        self._accumulated_power_watts = None
         self._power_event_count = None
         # Open device and start searching
         self.device_heart_rate.open(searchTimeout=self.search_timeout_sec)
@@ -147,7 +158,7 @@ class AntSensors():
         if (self.device_heart_rate.state and
             self.device_heart_rate.state != ChannelState.CLOSED):
             self.device_heart_rate.close()
-        if (self.device_power_meter.state and 
+        if (self.device_power_meter.state and
             self.device_power_meter.state != ChannelState.CLOSED):
             self.device_power_meter.close()
         try:
@@ -169,9 +180,10 @@ class AntSensors():
         else:
             print("Unknown device channel closed!")
         print("Channel closed for {:s}".format(device.name))
-        # TODO - figure out why re-open doesn't work - returns USB Driver error, perhaps something wasn't properly freed on close?
+        # TODO - figure out why re-open doesn't work - returns USB Driver error,
+        #        perhaps something wasn't properly freed on close?
         #if self._reconnect == True:
-        #    print("Attempting re-connect...")    
+        #    print("Attempting re-connect...")
         #    device.open()
 
     def _on_search_timeout(self, device):
@@ -186,10 +198,11 @@ class AntSensors():
             self._hr_event_time_ms = event_time_ms
             self._heart_rate_status.make_fresh()
 
-    def _on_power_data(self, event_count, pedal_diff, pedal_power_ratio, cadence_rpm, accumulated_power_W, instantaneous_power_W):
-        self._instantaneous_power_W = instantaneous_power_W
+    def _on_power_data(self, event_count, _, __, cadence_rpm,
+                       accumulated_power_watts, instantaneous_power_watts):
+        self._instantaneous_power_watts = instantaneous_power_watts
         self._cadence_rpm = cadence_rpm
-        self._accumulated_power_W = accumulated_power_W
+        self._accumulated_power_watts = accumulated_power_watts
         if (not self._power_event_count) or event_count != self._power_event_count:
             self._power_event_count = event_count
             self._power_meter_status.make_fresh()
@@ -204,13 +217,13 @@ class AntSensors():
         return self._heartrate_bpm
 
     @property
-    def power_W(self):
+    def power_watts(self):
         """
         Returns power in Watts if available, or None if not available or fresh.
         """
         #TODO: return calculated power from accumulated power if there are event_count gaps
         #TODO: check for stale data (if no update in xx sec, return None)
-        return self._instantaneous_power_W
+        return self._instantaneous_power_watts
 
     @property
     def cadence_rpm(self):
@@ -222,10 +235,16 @@ class AntSensors():
 
     @property
     def heart_rate_status(self):
+        """
+        Returns status of heart rate sensor.
+        """
         return self._heart_rate_status.state
 
     @property
     def power_meter_status(self):
+        """
+        Returns status of power meter sensor.
+        """
         return self._power_meter_status.state
     
 
@@ -248,7 +267,7 @@ if __name__ == "__main__":
             time.sleep(1)
             print("[{}] heartrate: {} power: {} cadence: {}      HRM: {} PM: {}".format(
                 dt.now().strftime("%H:%M:%S.%f"),
-                sensors.heartrate_bpm, sensors.power_W, sensors.cadence_rpm,
+                sensors.heartrate_bpm, sensors.power_watts, sensors.cadence_rpm,
                 sensors.heart_rate_status, sensors.power_meter_status))
         except AntSensors.SensorError as e:
             print("Caught sensor error {}".format(e.err_type))
