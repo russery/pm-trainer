@@ -64,7 +64,7 @@ class Tcx():
                   heartrate_bpm=None, cadence_rpm=None, speed_mps=None, power_watts=None):
         '''
         Adds an activity point, including position, speed, altitude, heartrate,
-        power, etc. (all optional)
+        power, etc. (all optional).
         '''
         point = et.SubElement(self.current_lap, "Trackpoint")
         et.SubElement(point, "Time").text = _time_stamp()
@@ -89,6 +89,22 @@ class Tcx():
             if power_watts:
                 et.SubElement(ext, "Watts").text = str(power_watts)
 
+    def add_lap_stats(self, total_time_s=None, distance_m=None):
+        '''
+        Adds total time and distance statistics to the Lap field,
+        or updates them if already present.
+        '''
+        if total_time_s:
+            time_tag = self.current_lap.find("TotalTimeSeconds")
+            if not time_tag:
+                time_tag = et.SubElement(self.current_lap, "TotalTimeSeconds")
+            time_tag.text = str(total_time_s)
+        if distance_m:
+            dist_tag = self.current_lap.find("DistanceMeters")
+            if not dist_tag:
+                dist_tag = et.SubElement(self.current_lap, "DistanceMeters")
+            dist_tag.text = str(distance_m)
+
     def flush(self):
         '''
         Writes tcx file to disk.
@@ -111,8 +127,11 @@ if __name__ == "__main__":
       cadence_rpm=39,
       speed_mps=0.0,
       power_watts=92)
+    file.add_lap_stats(total_time_s=10, distance_m=150)
+    file.flush()
     file.add_point(
         heartrate_bpm=92,
         cadence_rpm=39,
         power_watts=92)
+    file.add_lap_stats(total_time_s=104, distance_m=123)
     file.flush()
