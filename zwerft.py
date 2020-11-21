@@ -1,8 +1,7 @@
-#!/usr/bin/python
-# -*- coding: ascii -*-
 """
 Logs trainer rides or something.
 """
+
 import sys
 import time
 import PySimpleGUI as sg
@@ -49,8 +48,6 @@ if __name__ == "__main__":
                 exit_zwerft(-1)
             else:
                 print("Caught sensor error {}".format(e.err_type))
-        else:
-            exit_zwerft(-1)
         time.sleep(1)
         sensors.close()
         del sensors
@@ -96,6 +93,6 @@ if __name__ == "__main__":
                 continue
             else:
                 print("Caught sensor error {}".format(e.err_type))
-        else:
+        except Exception as e:
             print(e)
             exit_zwerft(-1)
