@@ -4,14 +4,17 @@ Logs trainer rides or something.
 
 import sys
 import time
+from datetime import datetime as dt
 import PySimpleGUI as sg
 from ant_sensors import AntSensors
+from tcx_file import Tcx
 
 def exit_zwerft(status=0):
     """
-    Exit cleanly, closing window and freeing ANT+ resources.
+    Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     """
     try:
+        logfile.flush()
         window.close()
         sensors.close()
     finally:
@@ -32,12 +35,10 @@ if __name__ == "__main__":
     sg.SetOptions(element_padding=(0,0))
     sg.theme("DarkBlack")
     # Connect to sensors
-    connected = False
-    while not connected:
+    while True:
         try:
             sensors = AntSensors()
             sensors.connect()
-            connected = True
             break
         except AntSensors.SensorError as e:
             if e.err_type == AntSensors.SensorError.ErrorType.USB:
@@ -52,30 +53,45 @@ if __name__ == "__main__":
         sensors.close()
         del sensors
 
-    layout = [[sg.T("HR:"), sg.T("000",(3,1),relief="raised",
+    layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
+                                 key="-TIME-",justification="L"),
+               sg.T("HR:"), sg.T("000",(3,1),relief="raised",
                                  key="-HEARTRATE-",justification="L"),
                sg.T("Watts:"),sg.T("0000",(4,1),relief="raised",
                                    key="-POWER-",justification="L"),
                sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
-                                     key="-CADENCE-",justification="L")],
-                [sg.ProgressBar(100,size=(80, 10),orientation="h",
-                                bar_color=("blue", "white"), k="-PROGRESS-",pad=((10,10),(10,0)))]]
-    window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True, use_ttk_buttons=True,
-        alpha_channel=0.8)
+                                     key="-CADENCE-",justification="L")]]
+    window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True,
+        use_ttk_buttons=True, alpha_channel=0.8)
 
+    logfile = Tcx()
+    logfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
+    start_time = dt.now()
 
     # Main loop
-    progress=0
     while True:
         try:
             # Handle window events
             event, values = window.read(timeout=250)
-            window["-HEARTRATE-"].update(sensors.heartrate_bpm)
-            window["-POWER-"].update(sensors.power_watts)
-            window["-CADENCE-"].update(sensors.cadence_rpm)
 
-            window["-PROGRESS-"].update_bar(progress)
-            progress += 1
+            # Update text display
+            heartrate = sensors.heartrate_bpm
+            power = sensors.power_watts
+            cadence = sensors.cadence_rpm
+            elapsed_time = dt.now() - start_time
+            window["-HEARTRATE-"].update(heartrate)
+            window["-POWER-"].update(power)
+            window["-CADENCE-"].update(cadence)
+            window["-TIME-"].update("{:02d}:{:02d}:{:02d}".format(
+                int(elapsed_time.seconds/3600),
+                int(elapsed_time.seconds/60),
+                elapsed_time.seconds % 60))
+
+            # Update log file
+            if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
+                (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
+                logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
+                logfile.lap_stats(total_time_s=elapsed_time.seconds)
 
             # Handle sensor status:
             update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)

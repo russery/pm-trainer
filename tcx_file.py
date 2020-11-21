@@ -89,7 +89,7 @@ class Tcx():
             if power_watts:
                 et.SubElement(ext, "Watts").text = str(power_watts)
 
-    def add_lap_stats(self, total_time_s=None, distance_m=None):
+    def lap_stats(self, total_time_s=None, distance_m=None):
         '''
         Adds total time and distance statistics to the Lap field,
         or updates them if already present.
@@ -127,11 +127,11 @@ if __name__ == "__main__":
       cadence_rpm=39,
       speed_mps=0.0,
       power_watts=92)
-    file.add_lap_stats(total_time_s=10, distance_m=150)
+    file.lap_stats(total_time_s=10, distance_m=150)
     file.flush()
     file.add_point(
         heartrate_bpm=92,
         cadence_rpm=39,
         power_watts=92)
-    file.add_lap_stats(total_time_s=104, distance_m=123)
+    file.lap_stats(total_time_s=104, distance_m=123)
     file.flush()
