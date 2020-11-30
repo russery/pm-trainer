@@ -5,6 +5,11 @@ Logs trainer rides or something.
 import sys
 import time
 from datetime import datetime as dt
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, FigureCanvasAgg
+from matplotlib.figure import Figure
+import matplotlib.backends.tkagg as tkagg
+import numpy as np
 import PySimpleGUI as sg
 from ant_sensors import AntSensors
 from workout_profile import Workout
@@ -66,13 +71,58 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
                                  key="-TARGET-",justification="L"),
            sg.T("Remaining:"),sg.T("MM:SS",(4,1),relief="raised",
-                                 key="-REMAINING-",justification="L")]]
+                                 key="-REMAINING-",justification="L")],
+           [sg.Canvas(size=(200,20), key="-PLOT-")]]
 window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True,
     use_ttk_buttons=True, alpha_channel=0.8)
+window.Finalize()
+
+workout = Workout("workouts/short_stack.yaml")
+
+
+# Initialize workout plot with workout profile
+canvas_elem = window["-PLOT-"]
+graph = FigureCanvasTkAgg(fig, master=canvas_elem.TKCanvas)
+canvas = canvas_elem.TKCanvas
+
+all_blocks = workout.get_all_blocks()
+
+fig = Figure()
+ax = fig.add_subplot(111)
+
+dur = 0
+for block in all_blocks:
+    width = block[0]
+    start = block[1]
+    end = block[2]
+    zone = get_zone(np.average([start,end]))
+    color = ZONE_COLORS[zone]
+    if start == end:
+        # Start == end, so this is a rectangle
+        shape = plt.Rectangle((dur, 0), width, start, fc=color)
+    else:
+        # This is a ramp (triangle)
+        shape = plt.Polygon([[dur,0],[dur,start],[dur+width,end],[dur+width,0]],fc=color)
+    ax.gca().add_patch(shape)
+    dur += width
+
+graph.draw()
+figure_x, figure_y, figure_w, figure_h = fig.bbox.bounds
+figure_w, figure_h = int(figure_w), int(figure_h)
+photo = Tk.PhotoImage(master=canvas, width=figure_w, height=figure_h)
+canvas.create_image(640 / 2, 480 / 2, image=photo)
+
+figure_canvas_agg = FigureCanvasAgg(fig)
+figure_canvas_agg.draw()
+
+tkagg.blit(photo, figure_canvas_agg.get_renderer()._renderer, colormode=2) 
+
+
+
+
 
 logfile = Tcx()
 logfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
-workout = Workout("workouts/short_stack.yaml")
 start_time = dt.now()
 
 # Main loop
@@ -111,6 +161,9 @@ while True:
         remain_s = workout.block_time_remaining(elapsed_time.seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             remain_s / 60, remain_s % 60))
+
+        # Update plot:
+        # TODO
 
         if event == sg.WIN_CLOSED:
             exit_zwerft()

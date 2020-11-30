@@ -69,6 +69,17 @@ class Workout():
         power = block_slope * (duration_s - time_left_s) + start_power
         return power
 
+    def get_all_blocks(self):
+        '''
+        Returns all blocks from the workout as a list of tuples:
+        [(duration, start power, end power),...]
+        '''
+        all_blocks = []
+        for block in self.workout["blocks"]:
+            cur_block = (block["duration"], block["start"], block["end"])
+            all_blocks.append(cur_block)
+        return all_blocks
+
 if __name__ == '__main__':
     workout = Workout("workouts/short_stack.yaml")
     time_s = 0
