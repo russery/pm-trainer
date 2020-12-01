@@ -1,45 +1,71 @@
+"""
+Draws a workout power profile and plots traces on top of it.
+"""
 import PySimpleGUI as sg
 import numpy as np
 from workout_profile import Workout
 
-def _get_zone(power):
-    for i in range (0,len(ProfilePlot.ZONES)-1):
-        if (power > ProfilePlot.ZONES[i]) and (power <= ProfilePlot.ZONES[i+1]):
+ZONES = [0, 0.75, 0.9,1.05,1.2,100]
+ZONE_COLORS = ["blue", "green", "yellow", "orange", "red"]
+
+def get_max_power(all_blocks):
+    '''
+    Returns the maximum power from a power profile.
+    '''
+    max_p = 0
+    for block in all_blocks:
+        _, start, end = block
+        max_p = max(max_p, start, end)
+    return max_p
+
+
+def get_zone(pwr):
+    '''
+    Returns the power zone number, given a normalized power (0.0-1.0, where 1.0=FTP).
+    '''
+    for i in range (0,len(ZONES)-1):
+        if ZONES[i] < pwr <= ZONES[i+1]:
             return i
     return None
 
-class ProfilePlot():
-    ZONES = [0, 0.75, 0.9,1.05,1.2,100]
-    ZONE_COLORS = ["blue", "green", "yellow", "orange", "red"]
+def plot_blocks(graph, all_blocks, y_max):
+    '''
+    Plots all the workout block segments from a workout profile.
+    Generates the color for each segment based on zone, and plots to fill the
+    entire graph.
+    y_max is the normalized maximum power to be displayed
+    '''
+    dur = 0
+    gwidth, gheight = graph.Size
+    gheight = gheight / y_max  # Scale Y of plot to max of power profile
+    for block in all_blocks:
+        width, start, end = block
+        zone = get_zone(np.average([start,end]))
+        color = ZONE_COLORS[zone]
+        startx = dur*gwidth
+        starty = start*gheight
+        endx = (dur+width) * gwidth
+        endy = end*gheight
+        graph.draw_polygon((
+            (startx,0), (startx,starty), (endx,endy), (endx,0)),
+            fill_color=color)
+        dur += width
 
-    def __init__(self, graph):
-        self.graph = graph
-
-    def plot_blocks(self,all_blocks):
-        dur = 0
-        gwidth, gheight = self.graph.Size
-        gheight = gheight * 0.5 # TODO: get max power in all blocks and use this to set Y scale factor
-        for block in all_blocks:
-            print (block)
-            width = block[0]
-            start = block[1]
-            end = block[2]
-            zone = _get_zone(np.average([start,end]))
-            color = ProfilePlot.ZONE_COLORS[zone]
-            startx = dur*gwidth
-            starty = start*gheight
-            endx = (dur+width) * gwidth
-            endy = end*gheight
-            print(startx, starty, endx, endy, gwidth, gheight)
-            poly = self.graph.draw_polygon((
-                (startx,0), (startx,starty), (endx,endy), (endx,0)),
-                fill_color=color)
-            dur += width
+def plot_trace(graph, point, y_max, size=2, color="red"):
+    '''
+    Plots a trace onto the graph.
+    '''
+    x, y = point
+    gwidth, gheight = graph.Size
+    gheight = gheight / y_max  # Scale Y of plot to max of power profile
+    # TODO: Make Y scaling work for other trace types (e.g. heartrate)
+    graph.draw_point((x*gwidth,y*gheight), size=size, color=color)
 
 
 if __name__ == '__main__':
+    import sys
     workout = Workout("workouts/short_stack.yaml")
-    all_blocks = workout.get_all_blocks()
+    blocks = workout.get_all_blocks()
 
     layout = [[sg.Graph(
         canvas_size=(800, 200),
@@ -50,13 +76,16 @@ if __name__ == '__main__':
         key='-PROFILE-')]]
     window = sg.Window('Workout Profile', layout, finalize=True)
 
-    plot = ProfilePlot(graph=window['-PROFILE-'])
-    plot.plot_blocks(all_blocks)
-        
+    max_power = get_max_power(blocks) * 1.2
+    plot_blocks(window['-PROFILE-'], blocks, max_power)
 
     while True:
-        event, values = window.read()
-        print(event, values)
-        if event == sg.WIN_CLOSED:
-            break
-    window.close()
+        for t in np.arange(0.0, 1.0, 0.001):
+            event, values = window.read(timeout=100)
+            if event == sg.WIN_CLOSED:
+                window.close()
+                sys.exit()
+
+            power = np.random.random_sample()*2.0
+            plot_trace(window['-PROFILE-'], (t,power), max_power)
+            
