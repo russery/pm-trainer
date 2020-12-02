@@ -36,6 +36,7 @@ class Workout():
         complete_fraction = curr_time_s / self._duration_s
         dur = 0
         ind = 0
+        block = None
         for block in self.workout["blocks"]:
             dur += block["duration"]
             if dur >= complete_fraction:
@@ -57,7 +58,7 @@ class Workout():
 
     def power_target(self, curr_time_s):
         '''
-        Returns the target power for the current time in 
+        Returns the target power for the current time in
         the current block.
         '''
         _, block = self._get_current_block(curr_time_s)
@@ -82,14 +83,17 @@ class Workout():
 
     @property
     def duration_s(self):
+        '''
+        Returns the workout duration in seconds
+        '''
         return self._duration_s
-    
 
 if __name__ == '__main__':
     workout = Workout("workouts/short_stack.yaml")
     time_s = 0
-    while time_s < workout._duration_s:
+    while time_s < workout.duration_s:
         block_remaining = workout.block_time_remaining(time_s)
         power_percent = workout.power_target(time_s)
-        print("{:5}  Remaining: {:5.0f}   Power: {:4.3f}".format(time_s, block_remaining, power_percent))
+        print("{:5}  Remaining: {:5.0f}   Power: {:4.3f}".format(
+            time_s, block_remaining, power_percent))
         time_s +=1

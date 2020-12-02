@@ -5,7 +5,6 @@ Logs trainer rides or something.
 import sys
 import time
 from datetime import datetime as dt
-import numpy as np
 import PySimpleGUI as sg
 import profile_plotter
 from ant_sensors import AntSensors

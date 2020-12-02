@@ -39,7 +39,7 @@ class AntSensors():
             NOTCONNECTED = 1
             CONNECTED = 2
             STALE = 3
-        
+
         def __init__(self, fresh_time_s=15):
             self._connected = False
             self._last_seen_time = None
@@ -119,7 +119,7 @@ class AntSensors():
         self._cadence_rpm = None
         self._accumulated_power_watts = None
         self._power_event_count = None
-    
+
     def connect(self):
         """
         Attaches to the ANT+ dongle and begins search for heartrate
@@ -136,7 +136,7 @@ class AntSensors():
             raise AntSensors.SensorError(
                 message = e.args[0],
                 err_type = AntSensors.SensorError.ErrorType.NODE)
-        
+
         # Reinitialize all data fields
         self._heartrate_bpm = None
         self._rr_interval_ms = None
@@ -190,7 +190,7 @@ class AntSensors():
         raise AntSensors.SensorError(
             message = "Timed out searching for device: {}".format(device.name),
             err_type=AntSensors.SensorError.ErrorType.TIMEOUT)
-        
+
     def _on_heartrate_data(self, computed_heartrate, event_time_ms, rr_interval_ms):
         self._heartrate_bpm = computed_heartrate
         self._rr_interval_ms = rr_interval_ms
@@ -246,7 +246,7 @@ class AntSensors():
         Returns status of power meter sensor.
         """
         return self._power_meter_status.state
-    
+
 
 if __name__ == "__main__":
     import time
