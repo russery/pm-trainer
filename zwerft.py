@@ -5,12 +5,9 @@ Logs trainer rides or something.
 import sys
 import time
 from datetime import datetime as dt
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, FigureCanvasAgg
-from matplotlib.figure import Figure
-import matplotlib.backends.tkagg as tkagg
 import numpy as np
 import PySimpleGUI as sg
+import profile_plotter
 from ant_sensors import AntSensors
 from workout_profile import Workout
 from tcx_file import Tcx
@@ -72,7 +69,9 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                                  key="-TARGET-",justification="L"),
            sg.T("Remaining:"),sg.T("MM:SS",(4,1),relief="raised",
                                  key="-REMAINING-",justification="L")],
-           [sg.Canvas(size=(200,20), key="-PLOT-")]]
+           [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
+                     graph_top_right=(800, 100), background_color='black',
+                     key='-PROFILE-')]]
 window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True,
     use_ttk_buttons=True, alpha_channel=0.8)
 window.Finalize()
@@ -81,44 +80,9 @@ workout = Workout("workouts/short_stack.yaml")
 
 
 # Initialize workout plot with workout profile
-canvas_elem = window["-PLOT-"]
-graph = FigureCanvasTkAgg(fig, master=canvas_elem.TKCanvas)
-canvas = canvas_elem.TKCanvas
-
-all_blocks = workout.get_all_blocks()
-
-fig = Figure()
-ax = fig.add_subplot(111)
-
-dur = 0
-for block in all_blocks:
-    width = block[0]
-    start = block[1]
-    end = block[2]
-    zone = get_zone(np.average([start,end]))
-    color = ZONE_COLORS[zone]
-    if start == end:
-        # Start == end, so this is a rectangle
-        shape = plt.Rectangle((dur, 0), width, start, fc=color)
-    else:
-        # This is a ramp (triangle)
-        shape = plt.Polygon([[dur,0],[dur,start],[dur+width,end],[dur+width,0]],fc=color)
-    ax.gca().add_patch(shape)
-    dur += width
-
-graph.draw()
-figure_x, figure_y, figure_w, figure_h = fig.bbox.bounds
-figure_w, figure_h = int(figure_w), int(figure_h)
-photo = Tk.PhotoImage(master=canvas, width=figure_w, height=figure_h)
-canvas.create_image(640 / 2, 480 / 2, image=photo)
-
-figure_canvas_agg = FigureCanvasAgg(fig)
-figure_canvas_agg.draw()
-
-tkagg.blit(photo, figure_canvas_agg.get_renderer()._renderer, colormode=2) 
-
-
-
+blocks = workout.get_all_blocks()
+max_power = profile_plotter.get_max_power(blocks) * 1.2
+profile_plotter.plot_blocks(window["-PROFILE-"], blocks, max_power)
 
 
 logfile = Tcx()
@@ -144,12 +108,6 @@ while True:
             int(elapsed_time.seconds/60),
             elapsed_time.seconds % 60))
 
-        # Update log file
-        if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
-            (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
-            logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
-            logfile.lap_stats(total_time_s=elapsed_time.seconds)
-
         # Handle sensor status:
         update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
         update_sensor_status_indicator(window["-POWER-"], sensors.power_meter_status)
@@ -163,7 +121,16 @@ while True:
             remain_s / 60, remain_s % 60))
 
         # Update plot:
-        # TODO
+        if power:
+            print(elapsed_time.seconds,workout.duration_s)
+            time_percent = elapsed_time.seconds / workout.duration_s
+            profile_plotter.plot_trace(window['-PROFILE-'], (time_percent,power), max_power)
+
+        # Update log file
+        if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
+            (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
+            logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
+            logfile.lap_stats(total_time_s=elapsed_time.seconds)
 
         if event == sg.WIN_CLOSED:
             exit_zwerft()

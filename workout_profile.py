@@ -30,10 +30,10 @@ class Workout():
         if abs(dur-1.0) > 0.001:
             raise Workout.WorkoutError(message="Invalid workout duration {} != 1.0".format(dur))
 
-        self.duration_s = self.workout["duration_s"]
+        self._duration_s = self.workout["duration_s"]
 
     def _get_current_block(self, curr_time_s):
-        complete_fraction = curr_time_s / self.duration_s
+        complete_fraction = curr_time_s / self._duration_s
         dur = 0
         ind = 0
         for block in self.workout["blocks"]:
@@ -48,12 +48,12 @@ class Workout():
         Returns the time left in the current workout block
         '''
         ind, block = self._get_current_block(curr_time_s)
-        block_duration_s = block["duration"] * self.duration_s
+        block__duration_s = block["duration"] * self._duration_s
         dur = 0
         for i in range(0,ind):
             dur += self.workout["blocks"][i]["duration"]
-        block_elapsed_s = curr_time_s - dur * self.duration_s
-        return block_duration_s - block_elapsed_s
+        block_elapsed_s = curr_time_s - dur * self._duration_s
+        return block__duration_s - block_elapsed_s
 
     def power_target(self, curr_time_s):
         '''
@@ -63,10 +63,10 @@ class Workout():
         _, block = self._get_current_block(curr_time_s)
         start_power = block["start"]
         end_power = block["end"]
-        duration_s = block["duration"] * self.duration_s
+        _duration_s = block["duration"] * self._duration_s
         time_left_s = self.block_time_remaining(curr_time_s)
-        block_slope = ((end_power - start_power) / duration_s)
-        power = block_slope * (duration_s - time_left_s) + start_power
+        block_slope = ((end_power - start_power) / _duration_s)
+        power = block_slope * (_duration_s - time_left_s) + start_power
         return power
 
     def get_all_blocks(self):
@@ -80,10 +80,15 @@ class Workout():
             all_blocks.append(cur_block)
         return all_blocks
 
+    @property
+    def duration_s(self):
+        return self._duration_s
+    
+
 if __name__ == '__main__':
     workout = Workout("workouts/short_stack.yaml")
     time_s = 0
-    while time_s < workout.duration_s:
+    while time_s < workout._duration_s:
         block_remaining = workout.block_time_remaining(time_s)
         power_percent = workout.power_target(time_s)
         print("{:5}  Remaining: {:5.0f}   Power: {:4.3f}".format(time_s, block_remaining, power_percent))
