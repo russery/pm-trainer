@@ -2,11 +2,13 @@
 Logs trainer rides or something.
 """
 
+import os
 import sys
 import time
 from datetime import datetime as dt
 import PySimpleGUI as sg
 import profile_plotter
+import settings
 from ant_sensors import AntSensors
 from workout_profile import Workout
 from tcx_file import Tcx
@@ -17,10 +19,17 @@ def exit_zwerft(status=0):
     """
     try:
         logfile.flush()
+    except:
+        pass
+    try:
         window.close()
+    except:
+        pass
+    try:
         sensors.close()
-    finally:
-        sys.exit(status)
+    except:
+        pass
+    sys.exit(status)
 
 def update_sensor_status_indicator(element, sensor_status):
     """
@@ -33,10 +42,14 @@ def update_sensor_status_indicator(element, sensor_status):
     elif sensor_status == AntSensors.SensorStatus.State.STALE:
         element.update(background_color="yellow")
 
-FTP_WATTS = 220
+# Load settings
+try:
+    cfg = settings.Settings("zwerft_settings.ini")
+except NameError:
+    cfg = settings.Settings() # Load default settings
 
-sg.SetOptions(element_padding=(0,0))
 sg.theme("DarkBlack")
+
 # Connect to sensors
 while True:
     try:
@@ -45,17 +58,20 @@ while True:
         break
     except AntSensors.SensorError as e:
         if e.err_type == AntSensors.SensorError.ErrorType.USB:
-            sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle \
-             - check USB connection and try again",
-                keep_on_top=True, any_key_closes=True)
+            sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle "
+             "- check USB connection and try again",
+                custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
             # TODO: Keep the application open and try again - this should be recoverable
             exit_zwerft(-1)
         else:
             print("Caught sensor error {}".format(e.err_type))
+            exit_zwerft(-1)
     time.sleep(1)
     sensors.close()
     del sensors
 
+# Set up window
+sg.SetOptions(element_padding=(0,0))
 layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                              key="-TIME-",justification="L"),
            sg.T("HR:"), sg.T("000",(3,1),relief="raised",
@@ -75,24 +91,30 @@ window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True,
     use_ttk_buttons=True, alpha_channel=0.8)
 window.Finalize()
 
-workout = Workout("workouts/short_stack.yaml")
-
 
 # Initialize workout plot with workout profile
+workout = Workout(cfg.get_setting("Workout"))
 blocks = workout.get_all_blocks()
 max_power = profile_plotter.get_max_power(blocks) * 1.2
 profile_plotter.plot_blocks(window["-PROFILE-"], blocks, max_power)
 
 
-logfile = Tcx()
+log_dir = cfg.get_setting("LogDirectory")
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+logfile = Tcx(file_name="{}/{}.tcx".format(
+    log_dir, dt.now().strftime("%Y%m%d_%H%M%S")))
 logfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
 start_time = dt.now()
 
 # Main loop
+update_ms = 1000 / float(cfg.get_setting("UpdateRateHz"))
 while True:
     try:
         # Handle window events
-        event, values = window.read(timeout=250)
+        event, values = window.read(timeout=update_ms)
+        if event == sg.WIN_CLOSED:
+            exit_zwerft()
 
         # Update text display
         heartrate = sensors.heartrate_bpm
@@ -114,7 +136,7 @@ while True:
 
         # Update workout params:
         window['-TARGET-'].update("{:4.0f}".format(
-            workout.power_target(elapsed_time.seconds)*FTP_WATTS))
+            workout.power_target(elapsed_time.seconds)*float(cfg.get_setting("FTPWatts"))))
         remain_s = workout.block_time_remaining(elapsed_time.seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             remain_s / 60, remain_s % 60))
@@ -131,8 +153,6 @@ while True:
             logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
             logfile.lap_stats(total_time_s=elapsed_time.seconds)
 
-        if event == sg.WIN_CLOSED:
-            exit_zwerft()
     except AntSensors.SensorError as e:
         if e.err_type == AntSensors.SensorError.ErrorType.USB:
             print("Could not connect to ANT+ dongle - check USB connection")
@@ -142,6 +162,6 @@ while True:
             continue
         else:
             print("Caught sensor error {}".format(e.err_type))
-    except Exception as e:
-        print(e)
-        exit_zwerft(-1)
+    # except Exception as e:
+    #     print(e)
+    #     exit_zwerft(-1)

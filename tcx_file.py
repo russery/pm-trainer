@@ -27,7 +27,7 @@ class Tcx():
         OTHER = 2
         MULTISPORT = 3
 
-    def __init__(self, file_name="{}.tcx".format(dt.now().strftime("%Y%m%d_%H%M%S"))):
+    def __init__(self, file_name):
         self.tcx = et.Element("TrainingCenterDatabase")
         self.tcx.set("xsi:schemaLocation",
                      "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 " \
