@@ -3,33 +3,22 @@ Handles all program settings.
 """
 import configparser as cp
 
-DEFAULT_SETTINGS = {
-   # User / session settings:
-   "FTPWatts": 200,
-   "Workout": "workouts/short_stack.yaml",
-
-   # Window / system settings
-   "LogDirectory": "logs",
-   "UpdateRateHz": 10
-}
-
-
-
 class Settings():
-    def __init__(self, filename=None):
+    '''
+    Handles reading and writing settings from a file
+    '''
+    def __init__(self):
         self.config = cp.ConfigParser()
+
+    def load_settings(self, filename=None, defaults=None):
+        '''
+        Load settings from a file, or a set of defaults
+        '''
         if filename:
-            self.load_settings(file)
-        else:
-            self.config = DEFAULT_SETTINGS
-
-
-    def load_settings(self, filename):
-        '''
-        Load settings from a file
-        '''
-        self.config.read(filename)
-        # TODO: Validate file format
+            self.config.read(filename)
+            # TODO: Validate file format
+        elif defaults:
+            self.config = defaults
 
     def write_settings(self, filename):
         '''
@@ -39,10 +28,7 @@ class Settings():
             self.config.write(configfile)
 
     def get_setting(self, key):
+        '''
+        Return a setting based on its name
+        '''
         return self.config[key]
-        
-
-if __name__ == "__main__":
-    cfg = Settings()
-    print(cfg.get_setting("FTPWatts"))
-    print(cfg.config)

@@ -10,28 +10,34 @@ import PySimpleGUI as sg
 import profile_plotter
 import settings
 from ant_sensors import AntSensors
+import assets.icons
 from workout_profile import Workout
 from tcx_file import Tcx
 
-def exit_zwerft(status=0):
+CONFIG_FILENAME = "zwerft_settings.ini"
+DEFAULT_SETTINGS = {
+   # User / session settings:
+   "FTPWatts": 200,
+   "Workout": "workouts/short_stack.yaml",
+
+   # Window / system settings
+   "LogDirectory": "logs",
+   "UpdateRateHz": 10
+}
+
+def _exit_zwerft(status=0):
     """
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     """
-    try:
+    if logfile:
         logfile.flush()
-    except:
-        pass
-    try:
+    if window:
         window.close()
-    except:
-        pass
-    try:
+    if sensors:
         sensors.close()
-    except:
-        pass
     sys.exit(status)
 
-def update_sensor_status_indicator(element, sensor_status):
+def _update_sensor_status_indicator(element, sensor_status):
     """
     Change color of the selected element based on the status of an ANT+ sensor.
     """
@@ -42,15 +48,34 @@ def update_sensor_status_indicator(element, sensor_status):
     elif sensor_status == AntSensors.SensorStatus.State.STALE:
         element.update(background_color="yellow")
 
+
+def _settings_dialog(config):
+    config_bak = config
+    settings_layout = [[sg.T("Hello is this the krusty krab?")],
+        [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]]
+    settings_window = sg.Window("Settings", settings_layout, grab_anywhere=True,
+        use_ttk_buttons=True, modal=True, keep_on_top=True)
+    settings_window.Finalize()
+
+    while True:
+        event, values = settings_window.read()
+        if (event == sg.WIN_CLOSED) or (event == "-CANCEL-"):
+            settings_window.close()
+            return config_bak
+        if event == "-SAVE-":
+            settings_window.close()
+            return config
+
 # Load settings
-try:
-    cfg = settings.Settings("zwerft_settings.ini")
-except NameError:
-    cfg = settings.Settings() # Load default settings
+cfg = settings.Settings()
+if os.path.isfile(CONFIG_FILENAME):
+    cfg.load_settings(filename=CONFIG_FILENAME)
+else:
+    cfg.load_settings(defaults=DEFAULT_SETTINGS)
 
 sg.theme("DarkBlack")
 
-# Connect to sensors
+# Attach to ANT+ dongle and start searching for sensors
 while True:
     try:
         sensors = AntSensors()
@@ -62,15 +87,15 @@ while True:
              "- check USB connection and try again",
                 custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
             # TODO: Keep the application open and try again - this should be recoverable
-            exit_zwerft(-1)
+            _exit_zwerft(-1)
         else:
             print("Caught sensor error {}".format(e.err_type))
-            exit_zwerft(-1)
+            _exit_zwerft(-1)
     time.sleep(1)
     sensors.close()
     del sensors
 
-# Set up window
+# Set up main window
 sg.SetOptions(element_padding=(0,0))
 layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                              key="-TIME-",justification="L"),
@@ -83,13 +108,16 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
                                  key="-TARGET-",justification="L"),
            sg.T("Remaining:"),sg.T("MM:SS",(4,1),relief="raised",
-                                 key="-REMAINING-",justification="L")],
+                                 key="-REMAINING-",justification="L"),
+           sg.Button('', image_data=assets.icons.settings,
+                button_color=(sg.theme_background_color(),sg.theme_background_color()),
+                border_width=0, key='-SETTINGS-')],
            [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
                      graph_top_right=(800, 100), background_color='black',
                      key='-PROFILE-')]]
-window = sg.Window("Zwerft", layout, grab_anywhere=True, keep_on_top=True,
-    use_ttk_buttons=True, alpha_channel=0.8)
+window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True, alpha_channel=0.9)
 window.Finalize()
+window.BringToFront()
 
 
 # Initialize workout plot with workout profile
@@ -114,7 +142,9 @@ while True:
         # Handle window events
         event, values = window.read(timeout=update_ms)
         if event == sg.WIN_CLOSED:
-            exit_zwerft()
+            _exit_zwerft()
+        if event == "-SETTINGS-":
+            _settings_dialog(cfg)
 
         # Update text display
         heartrate = sensors.heartrate_bpm
@@ -130,9 +160,9 @@ while True:
             elapsed_time.seconds % 60))
 
         # Handle sensor status:
-        update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
-        update_sensor_status_indicator(window["-POWER-"], sensors.power_meter_status)
-        update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
+        _update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
+        _update_sensor_status_indicator(window["-POWER-"], sensors.power_meter_status)
+        _update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
 
         # Update workout params:
         window['-TARGET-'].update("{:4.0f}".format(
@@ -162,6 +192,3 @@ while True:
             continue
         else:
             print("Caught sensor error {}".format(e.err_type))
-    # except Exception as e:
-    #     print(e)
-    #     exit_zwerft(-1)
