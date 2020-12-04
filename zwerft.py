@@ -54,8 +54,7 @@ def _settings_dialog(config):
     settings_layout = [[sg.T("Hello is this the krusty krab?")],
         [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]]
     settings_window = sg.Window("Settings", settings_layout, grab_anywhere=True,
-        use_ttk_buttons=True, modal=True, keep_on_top=True)
-    settings_window.Finalize()
+        use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True)
 
     while True:
         event, values = settings_window.read()
@@ -115,10 +114,7 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
            [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
                      graph_top_right=(800, 100), background_color='black',
                      key='-PROFILE-')]]
-window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True, alpha_channel=0.9)
-window.Finalize()
-window.BringToFront()
-
+window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True, alpha_channel=0.9, finalize=True)
 
 # Initialize workout plot with workout profile
 workout = Workout(cfg.get_setting("Workout"))
