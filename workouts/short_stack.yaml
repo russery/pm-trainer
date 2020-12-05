@@ -1,4 +1,5 @@
-name: short stack
+name: Short Stack
+description: Short workout with ramps from 0.75 to 1.15FTP
 duration_s: 1800
 blocks: 
   - duration: 0.1 

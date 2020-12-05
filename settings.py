@@ -18,7 +18,8 @@ class Settings():
             self.config.read(filename)
             # TODO: Validate file format
         elif defaults:
-            self.config = defaults
+            self.config.read_dict(defaults)
+
 
     def write_settings(self, filename):
         '''
@@ -27,8 +28,14 @@ class Settings():
         with open(filename, 'w') as configfile:
             self.config.write(configfile)
 
-    def get_setting(self, key):
+    def get(self, key):
         '''
         Return a setting based on its name
         '''
-        return self.config[key]
+        return self.config["DEFAULT"][key]
+
+    def set(self, key, value):
+        '''
+        Set a setting based on its name
+        '''
+        self.config["DEFAULT"][key] = value

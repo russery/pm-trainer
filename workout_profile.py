@@ -49,12 +49,12 @@ class Workout():
         Returns the time left in the current workout block
         '''
         ind, block = self._get_current_block(curr_time_s)
-        block__duration_s = block["duration"] * self._duration_s
+        block_duration_s = block["duration"] * self._duration_s
         dur = 0
         for i in range(0,ind):
             dur += self.workout["blocks"][i]["duration"]
         block_elapsed_s = curr_time_s - dur * self._duration_s
-        return block__duration_s - block_elapsed_s
+        return block_duration_s - block_elapsed_s
 
     def power_target(self, curr_time_s):
         '''
@@ -87,6 +87,22 @@ class Workout():
         Returns the workout duration in seconds
         '''
         return self._duration_s
+
+    @property
+    def name(self):
+        '''
+        Returns the name of the workout.
+        '''
+        return self.workout["name"]
+
+    @property
+    def description(self):
+        '''
+        Returns the description of the workout.
+        '''
+        return self.workout["description"]
+    
+    
 
 if __name__ == '__main__':
     workout = Workout("workouts/short_stack.yaml")

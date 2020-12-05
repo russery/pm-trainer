@@ -14,16 +14,29 @@ import assets.icons
 from workout_profile import Workout
 from tcx_file import Tcx
 
-CONFIG_FILENAME = "zwerft_settings.ini"
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
    "Workout": "workouts/short_stack.yaml",
 
    # Window / system settings
-   "LogDirectory": "logs",
+   "LogDirectory": "./logs",
+   "SettingsFile": "zwerft_settings.ini",
    "UpdateRateHz": 10
 }
+
+def _validate_int_range(val, val_name, val_range, error_list):
+    '''
+    Checks if a value is an integer in a range and generates 
+    an error message string if it is not, or is not an integer.
+    If an error message is generated, it is appended to the error_list.
+    '''
+    try:
+        if int(val) not in val_range:
+            raise ValueError
+    except ValueError:
+        error_list.append("Invalid {}: {} not between {}-{}".format(
+            val_name, val, val_range[0], val_range[-1]))
 
 def _exit_zwerft(status=0):
     """
@@ -48,29 +61,66 @@ def _update_sensor_status_indicator(element, sensor_status):
     elif sensor_status == AntSensors.SensorStatus.State.STALE:
         element.update(background_color="yellow")
 
-
 def _settings_dialog(config):
+    FTP_RANGE = range(1,1000)
+    UPDATE_HZ_RANGE = range(1,16,1)
     config_bak = config
-    settings_layout = [[sg.T("Hello is this the krusty krab?")],
-        [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]]
-    settings_window = sg.Window("Settings", settings_layout, grab_anywhere=True,
-        use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True)
+    temp_workout = Workout(config.get("Workout"))
+    log_dir = os.path.abspath(config.get("LogDirectory"))
+    settings_layout = [
+        [sg.Frame("User",
+            [[sg.T("FTP:"),
+              sg.Spin(values=[i for i in FTP_RANGE], key="-FTP-",
+                initial_value=config.get("FTPWatts"), size=(4,1)) ],
+            [sg.T("Sensors")]], vertical_alignment="t"),
+        sg.Frame("Workout",
+            [[sg.T("Workout:"), sg.Input(config.get("Workout"), key="-WORKOUTPATH-", visible=False),
+              sg.T(temp_workout.name), sg.B("Select", key="-WORKOUT-SEL-")],
+            [sg.Multiline(temp_workout.description, size=(30,3), disabled=True, font='courier 10')]],
+            vertical_alignment="t")],
+        [sg.Frame("System",
+            [[sg.T("Log Path:"), sg.Input(log_dir, k="-LOGDIRECTORY-"),
+              sg.FolderBrowse(button_text="Select", initial_folder=log_dir,
+                target="-LOGDIRECTORY-")],
+            [sg.T("Update Rate (Hz):"),
+             sg.Spin(values=[i for i in UPDATE_HZ_RANGE], initial_value=config.get("UpdateRateHz"),
+                size=(3,1), key="-UPDATEHZ-")]])],
+        [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
+    ]
+    settings_window = sg.Window("Settings", settings_layout,
+        use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
 
     while True:
-        event, values = settings_window.read()
-        if (event == sg.WIN_CLOSED) or (event == "-CANCEL-"):
+        e, v = settings_window.read()
+        if e in (sg.WIN_CLOSED, "-CANCEL-"):
             settings_window.close()
-            return config_bak
-        if event == "-SAVE-":
-            settings_window.close()
-            return config
+            return
+        if e == "-SAVE-":
+            errors = []
+            # Validate and save all values to config
+            _validate_int_range(v["-FTP-"], "FTP Value", FTP_RANGE, errors)
+            if not os.path.exists(v["-LOGDIRECTORY-"]):
+                errors.append("Invalid log path: {}".format(v["-LOGDIRECTORY-"]))
+            # TODO: Validate workout
+            _validate_int_range(v["-UPDATEHZ-"], "Update Rate", UPDATE_HZ_RANGE, errors)
+
+            if errors:
+                sg.Popup("\n".join(errors), title="Bad Settings")
+            else:
+                config.set("FTPWatts", str(v["-FTP-"]))
+                config.set("LogDirectory", v["-LOGDIRECTORY-"])
+                config.set("Workout", v["-WORKOUTPATH-"])
+                config.set("UpdateRateHz", str(v["-UPDATEHZ-"]))
+                settings_window.close()
+                config.write_settings(config.get("SettingsFile"))
+                return
 
 # Load settings
 cfg = settings.Settings()
-if os.path.isfile(CONFIG_FILENAME):
-    cfg.load_settings(filename=CONFIG_FILENAME)
+if os.path.isfile(DEFAULT_SETTINGS["SettingsFile"]):
+    cfg.load_settings(filename=DEFAULT_SETTINGS["SettingsFile"])
 else:
-    cfg.load_settings(defaults=DEFAULT_SETTINGS)
+    cfg.load_settings(defaults={"DEFAULT": DEFAULT_SETTINGS})
 
 sg.theme("DarkBlack")
 
@@ -95,7 +145,6 @@ while True:
     del sensors
 
 # Set up main window
-sg.SetOptions(element_padding=(0,0))
 layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                              key="-TIME-",justification="L"),
            sg.T("HR:"), sg.T("000",(3,1),relief="raised",
@@ -114,16 +163,17 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
            [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
                      graph_top_right=(800, 100), background_color='black',
                      key='-PROFILE-')]]
-window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True, alpha_channel=0.9, finalize=True)
+window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True,
+    alpha_channel=0.9, finalize=True, element_padding=(0,0))
 
 # Initialize workout plot with workout profile
-workout = Workout(cfg.get_setting("Workout"))
+workout = Workout(cfg.get("Workout"))
 blocks = workout.get_all_blocks()
 max_power = profile_plotter.get_max_power(blocks) * 1.2
 profile_plotter.plot_blocks(window["-PROFILE-"], blocks, max_power)
 
 
-log_dir = cfg.get_setting("LogDirectory")
+log_dir = cfg.get("LogDirectory")
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 logfile = Tcx(file_name="{}/{}.tcx".format(
@@ -132,11 +182,11 @@ logfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
 start_time = dt.now()
 
 # Main loop
-update_ms = 1000 / float(cfg.get_setting("UpdateRateHz"))
+update_ms = 1000 / float(cfg.get("UpdateRateHz"))
 while True:
     try:
         # Handle window events
-        event, values = window.read(timeout=update_ms)
+        event, _ = window.read(timeout=update_ms)
         if event == sg.WIN_CLOSED:
             _exit_zwerft()
         if event == "-SETTINGS-":
@@ -162,7 +212,7 @@ while True:
 
         # Update workout params:
         window['-TARGET-'].update("{:4.0f}".format(
-            workout.power_target(elapsed_time.seconds)*float(cfg.get_setting("FTPWatts"))))
+            workout.power_target(elapsed_time.seconds)*float(cfg.get("FTPWatts"))))
         remain_s = workout.block_time_remaining(elapsed_time.seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             remain_s / 60, remain_s % 60))
