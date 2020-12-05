@@ -5,8 +5,8 @@ import PySimpleGUI as sg
 import numpy as np
 from workout_profile import Workout
 
-ZONES = [0, 0.75, 0.9,1.05,1.2,100]
-ZONE_COLORS = ["blue", "green", "yellow", "orange", "red"]
+ZONES = [0, 0.6, 0.75, 0.9, 1.05, 1.18, 100]
+ZONE_COLORS = ["gray", "blue", "green", "yellow", "orange", "red"]
 
 def get_max_power(all_blocks):
     '''

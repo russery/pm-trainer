@@ -1,0 +1,58 @@
+name: Sweet Spot
+description: Alternate between 85% and 95% of FTP
+duration_s: 5400
+blocks: 
+  - duration: 0.12 
+    start: 0.5
+    end: 0.85
+  # 3x 5 mins @ 95% and 85%
+  - duration: 0.057 
+    start: 0.95
+    end: 0.95
+  - duration: 0.057 
+    start: 0.85
+    end: 0.85
+  - duration: 0.057 
+    start: 0.95
+    end: 0.95
+  - duration: 0.057 
+    start: 0.85
+    end: 0.85
+  - duration: 0.057 
+    start: 0.95
+    end: 0.95
+  - duration: 0.057 
+    start: 0.85
+    end: 0.85
+  # 3min recovery blocks with a 1min effort
+  - duration: 0.034 
+    start: 0.5
+    end: 0.5
+  - duration: 0.012 
+    start: 1.1
+    end: 1.1
+  - duration: 0.034 
+    start: 0.5
+    end: 0.5
+  # 3x 5 mins @ 95% and 85%
+  - duration: 0.057 
+    start: 0.95
+    end: 0.95
+  - duration: 0.057 
+    start: 0.85
+    end: 0.85
+  - duration: 0.056 
+    start: 0.95
+    end: 0.95
+  - duration: 0.056 
+    start: 0.85
+    end: 0.85
+  - duration: 0.056 
+    start: 0.95
+    end: 0.95
+  - duration: 0.056 
+    start: 0.85
+    end: 0.85
+  - duration: 0.12 
+    start: 0.75
+    end: 0.50
