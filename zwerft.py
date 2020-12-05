@@ -27,7 +27,7 @@ DEFAULT_SETTINGS = {
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
-    Checks if a value is an integer in a range and generates 
+    Checks if a value is an integer in a range and generates
     an error message string if it is not, or is not an integer.
     If an error message is generated, it is appended to the error_list.
     '''
@@ -64,9 +64,8 @@ def _update_sensor_status_indicator(element, sensor_status):
 def _settings_dialog(config):
     FTP_RANGE = range(1,1000)
     UPDATE_HZ_RANGE = range(1,16,1)
-    config_bak = config
     temp_workout = Workout(config.get("Workout"))
-    log_dir = os.path.abspath(config.get("LogDirectory"))
+    log_directory = os.path.abspath(config.get("LogDirectory"))
     settings_layout = [
         [sg.Frame("User",
             [[sg.T("FTP:"),
@@ -76,11 +75,11 @@ def _settings_dialog(config):
         sg.Frame("Workout",
             [[sg.T("Workout:"), sg.Input(config.get("Workout"), key="-WORKOUTPATH-", visible=False),
               sg.T(temp_workout.name), sg.B("Select", key="-WORKOUT-SEL-")],
-            [sg.Multiline(temp_workout.description, size=(30,3), disabled=True, font='courier 10')]],
+            [sg.Multiline(temp_workout.description, size=(30,3), disabled=True)]],
             vertical_alignment="t")],
         [sg.Frame("System",
-            [[sg.T("Log Path:"), sg.Input(log_dir, k="-LOGDIRECTORY-"),
-              sg.FolderBrowse(button_text="Select", initial_folder=log_dir,
+            [[sg.T("Log Path:"), sg.Input(log_directory, k="-LOGDIRECTORY-"),
+              sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
                 target="-LOGDIRECTORY-")],
             [sg.T("Update Rate (Hz):"),
              sg.Spin(values=[i for i in UPDATE_HZ_RANGE], initial_value=config.get("UpdateRateHz"),

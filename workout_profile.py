@@ -101,8 +101,7 @@ class Workout():
         Returns the description of the workout.
         '''
         return self.workout["description"]
-    
-    
+
 
 if __name__ == '__main__':
     workout = Workout("workouts/short_stack.yaml")
