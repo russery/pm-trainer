@@ -144,8 +144,8 @@ while True:
     del sensors
 
 # Set up main window
-layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
-                             key="-TIME-",justification="L"),
+layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
+                             key="-TIME-",justification="L", font="20"),
            sg.T("HR:"), sg.T("000",(3,1),relief="raised",
                              key="-HEARTRATE-",justification="L",
                              text_color="black", font="20"),
@@ -157,8 +157,8 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                                  text_color="black", font="20"),
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
                                  key="-TARGET-",justification="L", font="20"),
-           sg.T("Remaining:"),sg.T("MM:SS",(4,1),relief="raised",
-                                 key="-REMAINING-",justification="L"),
+           sg.T("Remaining:"),sg.T("MM:SS",(5,1),relief="raised",
+                                 key="-REMAINING-",justification="L", font="20"),
            sg.Button('', image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key='-SETTINGS-')],
@@ -213,17 +213,21 @@ while True:
         _update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
 
         # Update workout params:
-        window['-TARGET-'].update("{:4.0f}".format(
-            workout.power_target(elapsed_time.seconds)*float(cfg.get("FTPWatts"))))
+        power_target = workout.power_target(elapsed_time.seconds)
+        if power_target:
+            power_target = "{:4.0f}".format(power_target*float(cfg.get("FTPWatts")))
+        else:
+            power_target = ""
+        window['-TARGET-'].update(power_target)
         remain_s = workout.block_time_remaining(elapsed_time.seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
 
         # Update plot:
         if power:
-            print(elapsed_time.seconds,workout.duration_s)
-            time_percent = elapsed_time.seconds / workout.duration_s
-            profile_plotter.plot_trace(window['-PROFILE-'], (time_percent,power), max_power)
+            profile_plotter.plot_trace(window['-PROFILE-'],
+                (elapsed_time.seconds / workout.duration_s, power / max_power),
+                max_power)
 
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and

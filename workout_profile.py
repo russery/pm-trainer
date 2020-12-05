@@ -34,6 +34,8 @@ class Workout():
 
     def _get_current_block(self, curr_time_s):
         complete_fraction = curr_time_s / self._duration_s
+        if 0.0 > complete_fraction > 1.0:
+            return None, None
         dur = 0
         ind = 0
         block = None
@@ -49,6 +51,8 @@ class Workout():
         Returns the time left in the current workout block
         '''
         ind, block = self._get_current_block(curr_time_s)
+        if (ind == None) or (block == None):
+            return 0
         block_duration_s = block["duration"] * self._duration_s
         dur = 0
         for i in range(0,ind):
@@ -62,6 +66,8 @@ class Workout():
         the current block.
         '''
         _, block = self._get_current_block(curr_time_s)
+        if not block:
+            return None
         start_power = block["start"]
         end_power = block["end"]
         _duration_s = block["duration"] * self._duration_s
