@@ -17,7 +17,7 @@ from tcx_file import Tcx
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
-   "Workout": "workouts/short_stack.yaml",
+   "Workout": "workouts/sweet_spot.yaml",
 
    # Window / system settings
    "LogDirectory": "./logs",
@@ -147,13 +147,16 @@ while True:
 layout = [[sg.T("Time:"), sg.T("HH:MM:SS",relief="raised",
                              key="-TIME-",justification="L"),
            sg.T("HR:"), sg.T("000",(3,1),relief="raised",
-                             key="-HEARTRATE-",justification="L"),
+                             key="-HEARTRATE-",justification="L",
+                             text_color="black", font="20"),
            sg.T("Watts:"),sg.T("0000",(4,1),relief="raised",
-                               key="-POWER-",justification="L"),
+                               key="-POWER-",justification="L",
+                               text_color="black", font="20"),
            sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
-                                 key="-CADENCE-",justification="L"),
+                                 key="-CADENCE-",justification="L",
+                                 text_color="black", font="20"),
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
-                                 key="-TARGET-",justification="L"),
+                                 key="-TARGET-",justification="L", font="20"),
            sg.T("Remaining:"),sg.T("MM:SS",(4,1),relief="raised",
                                  key="-REMAINING-",justification="L"),
            sg.Button('', image_data=assets.icons.settings,
@@ -200,8 +203,8 @@ while True:
         window["-POWER-"].update(power)
         window["-CADENCE-"].update(cadence)
         window["-TIME-"].update("{:02d}:{:02d}:{:02d}".format(
-            int(elapsed_time.seconds/3600),
-            int(elapsed_time.seconds/60),
+            int(elapsed_time.seconds/3600) % 24,
+            int(elapsed_time.seconds/60) % 60,
             elapsed_time.seconds % 60))
 
         # Handle sensor status:
@@ -214,7 +217,7 @@ while True:
             workout.power_target(elapsed_time.seconds)*float(cfg.get("FTPWatts"))))
         remain_s = workout.block_time_remaining(elapsed_time.seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
-            remain_s / 60, remain_s % 60))
+            int(remain_s / 60) % 60, remain_s % 60))
 
         # Update plot:
         if power:
@@ -227,6 +230,7 @@ while True:
             (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
             logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
             logfile.lap_stats(total_time_s=elapsed_time.seconds)
+            logfile.flush()
 
     except AntSensors.SensorError as e:
         if e.err_type == AntSensors.SensorError.ErrorType.USB:

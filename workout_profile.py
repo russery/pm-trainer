@@ -104,7 +104,7 @@ class Workout():
 
 
 if __name__ == '__main__':
-    workout = Workout("workouts/short_stack.yaml")
+    workout = Workout("workouts/sweet_spot.yaml")
     time_s = 0
     while time_s < workout.duration_s:
         block_remaining = workout.block_time_remaining(time_s)
