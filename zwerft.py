@@ -17,7 +17,7 @@ from tcx_file import Tcx
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
-   "Workout": "workouts/sweet_spot.yaml",
+   "Workout": "workouts/short_stack.yaml",
 
    # Window / system settings
    "LogDirectory": "./logs",
@@ -171,8 +171,10 @@ window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True,
 # Initialize workout plot with workout profile
 workout = Workout(cfg.get("Workout"))
 blocks = workout.get_all_blocks()
-max_power = profile_plotter.get_max_power(blocks) * 1.2
-profile_plotter.plot_blocks(window["-PROFILE-"], blocks, max_power)
+min_power, max_power = profile_plotter.get_min_max_power(blocks)
+min_power *= 0.9
+max_power *= 1.1
+profile_plotter.plot_blocks(window["-PROFILE-"], blocks, (min_power, max_power))
 
 
 log_dir = cfg.get("LogDirectory")
