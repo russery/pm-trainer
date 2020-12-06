@@ -25,6 +25,8 @@ DEFAULT_SETTINGS = {
    "UpdateRateHz": 10
 }
 
+PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits
+
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
     Checks if a value is an integer in a range and generates
@@ -114,6 +116,25 @@ def _settings_dialog(config):
                 config.write_settings(config.get("SettingsFile"))
                 return
 
+def _get_workout_from_config(config):
+    # Initialize workout plot with workout profile
+    wkout = Workout(config.get("Workout"))
+    min_p, max_p = profile_plotter.get_min_max_power(workout.get_all_blocks())
+    min_p *= 1 - PLOT_MARGINS_PERCENT/100
+    max_p *= 1 + PLOT_MARGINS_PERCENT/100
+    return wkout, min_p, max_p
+
+def _start_log(ldir):
+    if not os.path.exists(ldir):
+        os.makedirs(ldir)
+    lfile = Tcx(file_name="{}/{}.tcx".format(
+        ldir, dt.now().strftime("%Y%m%d_%H%M%S")))
+    lfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
+    return lfile
+
+def _plot_workout(graph, wkout, y_lims):
+    profile_plotter.plot_blocks(graph, wkout.get_all_blocks(), y_lims)
+
 # Load settings
 cfg = settings.Settings()
 if os.path.isfile(DEFAULT_SETTINGS["SettingsFile"]):
@@ -168,25 +189,18 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
 window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True,
     alpha_channel=0.9, finalize=True, element_padding=(0,0))
 
-# Initialize workout plot with workout profile
-workout = Workout(cfg.get("Workout"))
-blocks = workout.get_all_blocks()
-min_power, max_power = profile_plotter.get_min_max_power(blocks)
-min_power *= 0.9
-max_power *= 1.1
-profile_plotter.plot_blocks(window["-PROFILE-"], blocks, (min_power, max_power))
 
+workout, min_power, max_power = _get_workout_from_config(cfg)
+_plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
 
 log_dir = cfg.get("LogDirectory")
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-logfile = Tcx(file_name="{}/{}.tcx".format(
-    log_dir, dt.now().strftime("%Y%m%d_%H%M%S")))
-logfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
+logfile = _start_log(log_dir)
+
 start_time = dt.now()
 
 # Main loop
 update_ms = 1000 / float(cfg.get("UpdateRateHz"))
+ftp_watts = float(cfg.get("FTPWatts"))
 while True:
     try:
         # Handle window events
@@ -195,8 +209,21 @@ while True:
             _exit_zwerft()
         if event == "-SETTINGS-":
             _settings_dialog(cfg)
+            # Update workout plot:
+            w_new, min_new, max_new = _get_workout_from_config(cfg)
+            if w_new.name != workout.name:
+                workout, min_power, max_power = w_new, min_new, max_new
+                _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
+            # Update log directory and start new log if it's changed:
+            dir_new = cfg.get("LogDirectory")
+            if dir_new != log_dir:
+                log_dir = dir_new
+                logfile = _start_log(log_dir)
+            # Update other values:
+            update_ms = 1000 / float(cfg.get("UpdateRateHz"))
+            ftp_watts = float(cfg.get("FTPWatts"))
 
-        # Update text display
+        # Update text display:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
@@ -217,7 +244,7 @@ while True:
         # Update workout params:
         power_target = workout.power_target(elapsed_time.seconds)
         if power_target:
-            power_target = "{:4.0f}".format(power_target*float(cfg.get("FTPWatts")))
+            power_target = "{:4.0f}".format(power_target*ftp_watts)
         else:
             power_target = ""
         window['-TARGET-'].update(power_target)
@@ -228,8 +255,8 @@ while True:
         # Update plot:
         if power:
             profile_plotter.plot_trace(window['-PROFILE-'],
-                (elapsed_time.seconds / workout.duration_s, power / max_power),
-                max_power)
+                (elapsed_time.seconds / workout.duration_s, power / ftp_watts),
+                (min_power, max_power))
 
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
