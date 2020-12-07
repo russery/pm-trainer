@@ -1,7 +1,6 @@
 """
 Logs trainer rides or something.
 """
-
 import os
 import sys
 import time
@@ -12,12 +11,14 @@ import settings
 from ant_sensors import AntSensors
 import assets.icons
 from workout_profile import Workout
-from tcx_file import Tcx
+from tcx_file import Tcx, Point
+
+TEST_MODE = True
 
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
-   "Workout": "workouts/short_stack.yaml",
+   "Workout": "workouts/sweet_spot.yaml",
 
    # Window / system settings
    "LogDirectory": "./logs",
@@ -26,6 +27,7 @@ DEFAULT_SETTINGS = {
 }
 
 PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits
+HEART_RATE_LIMITS = (100, 200)
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
@@ -119,21 +121,29 @@ def _settings_dialog(config):
 def _get_workout_from_config(config):
     # Initialize workout plot with workout profile
     wkout = Workout(config.get("Workout"))
-    min_p, max_p = profile_plotter.get_min_max_power(workout.get_all_blocks())
-    min_p *= 1 - PLOT_MARGINS_PERCENT/100
-    max_p *= 1 + PLOT_MARGINS_PERCENT/100
+    min_p, max_p = profile_plotter.get_min_max_power(wkout.get_all_blocks())
     return wkout, min_p, max_p
 
 def _start_log(ldir):
     if not os.path.exists(ldir):
         os.makedirs(ldir)
-    lfile = Tcx(file_name="{}/{}.tcx".format(
+    lfile = Tcx()
+    lfile.start_log("{}/{}.tcx".format(
         ldir, dt.now().strftime("%Y%m%d_%H%M%S")))
     lfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
     return lfile
 
+def _scale_plot_margins(y_lims):
+    return ((y_lims[0]*(1 - PLOT_MARGINS_PERCENT/100)),
+                y_lims[1]*(1 + PLOT_MARGINS_PERCENT/100))
+
 def _plot_workout(graph, wkout, y_lims):
+    y_lims = _scale_plot_margins(y_lims)
     profile_plotter.plot_blocks(graph, wkout.get_all_blocks(), y_lims)
+
+def _plot_trace(graph, val, y_lims, size=3, color='red'):
+    y_lims = _scale_plot_margins(y_lims)
+    profile_plotter.plot_trace(graph, val, y_lims, size=size, color=color)
 
 # Load settings
 cfg = settings.Settings()
@@ -199,6 +209,15 @@ logfile = _start_log(log_dir)
 start_time = dt.now()
 
 # Main loop
+
+# HACKY TESTING CODE
+if TEST_MODE:
+    test_data = Tcx()
+    test_data.open_log("sample_files/20201205_091538.tcx")
+    test_data.get_activity()
+    p = test_data.get_next_point()
+    test_start_time = p.time
+
 update_ms = 1000 / float(cfg.get("UpdateRateHz"))
 ftp_watts = float(cfg.get("FTPWatts"))
 while True:
@@ -227,7 +246,17 @@ while True:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
+
+
         elapsed_time = dt.now() - start_time
+        # HACKY TEST CODE:
+        if TEST_MODE:
+            while (p.time - test_start_time) <= elapsed_time:
+                heartrate = p.heartrate_bpm
+                power = p.power_watts
+                cadence = p.cadence_rpm
+                p = test_data.get_next_point()
+
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
         window["-CADENCE-"].update(cadence)
@@ -253,10 +282,15 @@ while True:
             int(remain_s / 60) % 60, remain_s % 60))
 
         # Update plot:
+        norm_time = elapsed_time.seconds / workout.duration_s
         if power:
-            profile_plotter.plot_trace(window['-PROFILE-'],
-                (elapsed_time.seconds / workout.duration_s, power / ftp_watts),
-                (min_power, max_power))
+            _plot_trace(window["-PROFILE-"],
+                (norm_time, power / ftp_watts),
+                (min_power, max_power), color="red")
+        if heartrate:
+            _plot_trace(window["-PROFILE-"],
+                (norm_time, (heartrate-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
+                (0,0.5), color="cyan")
 
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
