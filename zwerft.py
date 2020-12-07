@@ -196,7 +196,7 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
            [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
                      graph_top_right=(800, 100), background_color='black',
                      key='-PROFILE-')]]
-window = sg.Window("Zwerft", layout, grab_anywhere=True, use_ttk_buttons=True,
+window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
     alpha_channel=0.9, finalize=True, element_padding=(0,0))
 
 
@@ -209,7 +209,6 @@ logfile = _start_log(log_dir)
 start_time = dt.now()
 
 # Main loop
-
 # HACKY TESTING CODE
 if TEST_MODE:
     test_data = Tcx()
@@ -227,7 +226,9 @@ while True:
         if event == sg.WIN_CLOSED:
             _exit_zwerft()
         if event == "-SETTINGS-":
+            window.Disappear()
             _settings_dialog(cfg)
+            window.Reappear()
             # Update workout plot:
             w_new, min_new, max_new = _get_workout_from_config(cfg)
             if w_new.name != workout.name:
