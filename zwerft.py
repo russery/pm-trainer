@@ -12,6 +12,7 @@ from ant_sensors import AntSensors
 import assets.icons
 from workout_profile import Workout
 from tcx_file import Tcx, Point
+from bug_indicator import BugIndicator
 
 TEST_MODE = True
 
@@ -28,6 +29,7 @@ DEFAULT_SETTINGS = {
 
 PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits
 HEART_RATE_LIMITS = (100, 200)
+POWER_BUG_LIMITS_WATTS = 100 # Vertical size of power bug in watts
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
@@ -192,13 +194,15 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
                                  key="-REMAINING-",justification="L", font="20"),
            sg.Button('', image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
-                border_width=0, key='-SETTINGS-')],
-           [sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
-                     graph_top_right=(800, 100), background_color='black',
-                     key='-PROFILE-')]]
+                border_width=0, key="-SETTINGS-")],
+           [sg.Graph(canvas_size=(30,100), graph_bottom_left=(0,0), graph_top_right=(50,100),
+                     background_color="black", key="-BUG-"),
+           sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
+                     graph_top_right=(800, 100), background_color="black",
+                     key="-PROFILE-")]]
 window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
     alpha_channel=0.9, finalize=True, element_padding=(0,0))
-
+power_bug = BugIndicator(window["-BUG-"])
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
@@ -292,6 +296,10 @@ while True:
             _plot_trace(window["-PROFILE-"],
                 (norm_time, (heartrate-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
                 (0,0.5), color="cyan")
+
+        # Update power bug
+        if power:
+            power_bug.update((power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
