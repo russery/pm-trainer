@@ -22,6 +22,10 @@ def _time_stamp():
     return dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 class Point():
+    '''
+    Holds all the possible data for a TCX TrackPoint, and implements
+    a nice string conversion.
+    '''
     def __init__(self, time=None, lat_deg=None, lon_deg=None, altitude_m=None,
                  distance_m=None, heartrate_bpm=None, cadence_rpm=None,
                  speed_mps=None, power_watts=None):
@@ -60,7 +64,7 @@ class Point():
 class Tcx():
     '''
     Creates a TCX xml tree, allows adding points to it, and handles
-    writing to a file.
+    reading to and writing from a file.
     '''
     class ActivityType(Enum):
         '''
@@ -75,18 +79,19 @@ class Tcx():
         self.tcx = None
         self.file_name = None
         self.activity = None
+        self.activities = None
         self.current_lap = None
         self.points = None
 
-    def open_log(self, file_name):
+    def open_log(self, fname):
         '''
         Opens an existing log file for reading or writing
         '''
-        self.tcx = et.parse(file_name).getroot()
+        self.tcx = et.parse(fname).getroot()
         self.activities = self.tcx.find("Activities", NAMESPACES)
-        self.file_name = file_name
+        self.file_name = fname
 
-    def start_log(self, file_name):
+    def start_log(self, fname):
         '''
         Starts a new log
         '''
@@ -96,9 +101,8 @@ class Tcx():
         self.tcx.set("xsi:schemaLocation",
                      NAMESPACES[""] +
                      " http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd")
-        
         self.activities = et.SubElement(self.tcx, "Activities")
-        self.file_name = file_name
+        self.file_name = fname
         self.activity = None
         self.current_lap = None
 
@@ -154,12 +158,14 @@ class Tcx():
     def get_next_point(self):
         '''
         Get the next point in the TCX file.
-        Note that if points are added while iterating through points, the new points will not be returned.
+        Note that if points are added while iterating through points,
+        the new points will not be returned.
         '''
         point = Point()
         if not self.points:
             # If not already set, grab the first point from the activity
-            self.points = self.activity.find("Lap", NAMESPACES).find("Track", NAMESPACES).iterfind("Trackpoint", NAMESPACES)
+            self.points = self.activity.find("Lap", NAMESPACES).find(
+                "Track", NAMESPACES).iterfind("Trackpoint", NAMESPACES)
         try:
             point_record = next(self.points)
         except StopIteration:
@@ -191,7 +197,8 @@ class Tcx():
         try:
             spd = point_record.find("Extensions", NAMESPACES)
             if spd is not None:
-                spd = spd.find("TPX", {"": NAMESPACES["ns3"]}).find("Speed", {"": NAMESPACES["ns3"]})
+                spd = spd.find("TPX", {"": NAMESPACES["ns3"]}).find(
+                    "Speed", {"": NAMESPACES["ns3"]})
                 if spd is not None:
                     point.speed_mps = float(spd.text)
         except AttributeError:
@@ -199,7 +206,8 @@ class Tcx():
         try:
             pwr = point_record.find("Extensions", NAMESPACES)
             if pwr is not None:
-                pwr = pwr.find("TPX", {"": NAMESPACES["ns3"]}).find("Watts", {"": NAMESPACES["ns3"]})
+                pwr = pwr.find("TPX", {"": NAMESPACES["ns3"]}).find(
+                    "Watts", {"": NAMESPACES["ns3"]})
                 if pwr is not None:
                     point.power_watts = int(pwr.text)
         except AttributeError:
@@ -254,11 +262,11 @@ if __name__ == "__main__":
     file.lap_stats(total_time_s=104, distance_m=123)
     file.flush()
 
-    # file_name = "sample_files/20201205_091538.tcx"
-    # file_name = "sample_files/Jon_s_Mix.tcx"
-    file_name = "sample_files/Tried_out_the_workout_course_.tcx"
+    # FILE = "sample_files/20201205_091538.tcx"
+    # FILE = "sample_files/Jon_s_Mix.tcx"
+    FILE = "sample_files/Tried_out_the_workout_course_.tcx"
     file = Tcx()
-    file.open_log(file_name)
+    file.open_log(FILE)
     file.get_activity()
     p = file.get_next_point()
     while p:
