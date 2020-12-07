@@ -7,11 +7,55 @@ from xml.dom import minidom
 from enum import Enum
 from datetime import datetime as dt
 
+NAMESPACES = {
+    "": "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2",
+    "ns2": "http://www.garmin.com/xmlschemas/UserProfile/v2",
+    "ns3": "http://www.garmin.com/xmlschemas/ActivityExtension/v2",
+    "ns5": "http://www.garmin.com/xmlschemas/ActivityGoals/v1",
+    "xsi": "http://www.w3.org/2001/XMLSchema-instance"
+}
+
 def _time_stamp():
     '''
     Returns a UTC timestamp string
     '''
     return dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+class Point():
+    def __init__(self, time=None, lat_deg=None, lon_deg=None, altitude_m=None,
+                 distance_m=None, heartrate_bpm=None, cadence_rpm=None,
+                 speed_mps=None, power_watts=None):
+        self.time = time
+        self.lat_deg = lat_deg
+        self.lon_deg = lon_deg
+        self.altitude_m = altitude_m
+        self.distance_m = distance_m
+        self.heartrate_bpm = heartrate_bpm
+        self.cadence_rpm = cadence_rpm
+        self.speed_mps = speed_mps
+        self.power_watts = power_watts
+
+    def __str__(self):
+        vals = {
+            "Time": {"Format": "{}", "Value": self.time},
+            "Lat": {"Format": "{:-8.4f}", "Value": self.lat_deg},
+            "Lon": {"Format": "{:-8.4f}", "Value": self.lon_deg},
+            "Alt": {"Format": "{:4.1f}", "Value": self.altitude_m},
+            "Dist": {"Format": "{:4.1f} ", "Value": self.distance_m},
+            "HR": {"Format": "{:3.0f}", "Value": self.heartrate_bpm},
+            "Cad": {"Format": "{:3.0f}", "Value": self.cadence_rpm},
+            "Speed": {"Format": "{:4.1f}", "Value": self.speed_mps},
+            "Power": {"Format": "{:4.0f}", "Value": self.power_watts}
+        }
+        out = ""
+        for key, val in vals.items():
+            if val["Value"] is None:
+                val["Value"] = "None"
+            else:
+                val["Value"] = val["Format"].format(val["Value"])
+            out += "{}: {}  ".format(key, val["Value"])
+
+        return out
 
 class Tcx():
     '''
@@ -27,25 +71,42 @@ class Tcx():
         OTHER = 2
         MULTISPORT = 3
 
-    def __init__(self, file_name):
+    def __init__(self):
+        self.tcx = None
+        self.file_name = None
+        self.activity = None
+        self.current_lap = None
+        self.points = None
+
+    def open_log(self, file_name):
+        '''
+        Opens an existing log file for reading or writing
+        '''
+        self.tcx = et.parse(file_name).getroot()
+        self.activities = self.tcx.find("Activities", NAMESPACES)
+        self.file_name = file_name
+
+    def start_log(self, file_name):
+        '''
+        Starts a new log
+        '''
         self.tcx = et.Element("TrainingCenterDatabase")
+        for prefix, uri in NAMESPACES.items():
+            self.tcx.set("xmlns{}{}".format("" if prefix=="" else ":", prefix), uri)
         self.tcx.set("xsi:schemaLocation",
-                     "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 " \
-                      "http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd")
-        self.tcx.set("xmlns:ns5",
-                     "http://www.garmin.com/xmlschemas/ActivityGoals/v1")
-        self.tcx.set("xmlns:ns3",
-                     "http://www.garmin.com/xmlschemas/ActivityExtension/v2")
-        self.tcx.set("xmlns:ns2",
-                     "http://www.garmin.com/xmlschemas/UserProfile/v2")
-        self.tcx.set("xmlns",
-                     "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
-        self.tcx.set("xmlns:xsi",
-                     "http://www.w3.org/2001/XMLSchema-instance")
+                     NAMESPACES[""] +
+                     " http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd")
+        
         self.activities = et.SubElement(self.tcx, "Activities")
         self.file_name = file_name
         self.activity = None
         self.current_lap = None
+
+    def get_activity(self, activity_index=0):
+        '''
+        Sets the current activity to the one specified by activity_index
+        '''
+        self.activity = self.activities.findall("Activity", NAMESPACES)[activity_index]
 
     def start_activity(self, activity_type):
         '''
@@ -57,37 +118,93 @@ class Tcx():
         self.activity = et.SubElement(self.activities, "Activity")
         self.activity.set("Sport", activity_type.name)
         et.SubElement(self.activity, "Id").text = _time_stamp()
-        self.current_lap = et.SubElement(et.SubElement(self.activity, "Track"), "Lap")
+        self.current_lap = et.SubElement(et.SubElement(self.activity, "Lap"), "Track")
 
 
-    def add_point(self, lat_deg=None, lon_deg=None, altitude_m=None, distance_m=None,
-                  heartrate_bpm=None, cadence_rpm=None, speed_mps=None, power_watts=None):
+    def add_point(self, point):
         '''
         Adds an activity point, including position, speed, altitude, heartrate,
         power, etc. (all optional).
         '''
-        point = et.SubElement(self.current_lap, "Trackpoint")
-        et.SubElement(point, "Time").text = _time_stamp()
-        if lat_deg and lon_deg:
-            position = et.SubElement(point, "Position")
-            et.SubElement(position, "LatitudeDegrees").text = str(lat_deg)
-            et.SubElement(position, "LongitudeDegrees").text = str(lon_deg)
-        if altitude_m:
-            et.SubElement(point, "AltitudeMeters").text = str(altitude_m)
-        if distance_m:
-            et.SubElement(point, "DistanceMeters").text = str(distance_m)
-        if heartrate_bpm:
-            hr = et.SubElement(point, "HeartRateBpm")
-            et.SubElement(hr, "Value").text = str(heartrate_bpm)
-        if cadence_rpm:
-            et.SubElement(point, "Cadence").text = str(cadence_rpm)
-        if speed_mps or power_watts:
-            ext = et.SubElement(et.SubElement(point, "Extensions"),"TPX")
+        if not point.time:
+            point.time = _time_stamp()
+        point_record = et.SubElement(self.current_lap, "Trackpoint")
+        et.SubElement(point_record, "Time").text = point.time
+        if point.lat_deg and point.lon_deg:
+            position = et.SubElement(point_record, "Position")
+            et.SubElement(position, "LatitudeDegrees").text = str(point.lat_deg)
+            et.SubElement(position, "LongitudeDegrees").text = str(point.lon_deg)
+        if point.altitude_m:
+            et.SubElement(point_record, "AltitudeMeters").text = str(point.altitude_m)
+        if point.distance_m:
+            et.SubElement(point_record, "DistanceMeters").text = str(point.distance_m)
+        if point.heartrate_bpm:
+            hr = et.SubElement(point_record, "HeartRateBpm")
+            et.SubElement(hr, "Value").text = str(point.heartrate_bpm)
+        if point.cadence_rpm:
+            et.SubElement(point_record, "Cadence").text = str(point.cadence_rpm)
+        if point.speed_mps or point.power_watts:
+            ext = et.SubElement(et.SubElement(point_record, "Extensions"),"TPX")
             ext.set("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2")
-            if speed_mps:
-                et.SubElement(ext, "Speed").text = str(speed_mps)
-            if power_watts:
-                et.SubElement(ext, "Watts").text = str(power_watts)
+            if point.speed_mps:
+                et.SubElement(ext, "Speed").text = str(point.speed_mps)
+            if point.power_watts:
+                et.SubElement(ext, "Watts").text = str(point.power_watts)
+
+    def get_next_point(self):
+        '''
+        Get the next point in the TCX file.
+        Note that if points are added while iterating through points, the new points will not be returned.
+        '''
+        point = Point()
+        if not self.points:
+            # If not already set, grab the first point from the activity
+            self.points = self.activity.find("Lap", NAMESPACES).find("Track", NAMESPACES).iterfind("Trackpoint", NAMESPACES)
+        try:
+            point_record = next(self.points)
+        except StopIteration:
+            self.points = None
+            return None
+        point.time = dt.strptime(point_record.find("Time", NAMESPACES).text, "%Y-%m-%dT%H:%M:%SZ")
+        try:
+            lat = point_record.find("Position", NAMESPACES).find("LatitudeDegrees", NAMESPACES)
+            lon = point_record.find("Position", NAMESPACES).find("LongitudeDegrees", NAMESPACES)
+            if lat is not None and lon is not None:
+                point.lat_deg, point.lon_deg = float(lat.text), float(lon.text)
+        except AttributeError:
+            pass
+        alt = point_record.find("AltitudeMeters", NAMESPACES)
+        if alt is not None:
+            point.altitude_m = float(alt.text)
+        dist = point_record.find("DistanceMeters", NAMESPACES)
+        if dist is not None:
+            point.distance_m = float(dist.text)
+        try:
+            hr = point_record.find("HeartRateBpm", NAMESPACES).find("Value", NAMESPACES)
+            if hr is not None:
+                point.heartrate_bpm = int(hr.text)
+        except AttributeError:
+            pass
+        cad = point_record.find("Cadence", NAMESPACES)
+        if cad is not None:
+            point.cadence_rpm = int(cad.text)
+        try:
+            spd = point_record.find("Extensions", NAMESPACES)
+            if spd is not None:
+                spd = spd.find("TPX", {"": NAMESPACES["ns3"]}).find("Speed", {"": NAMESPACES["ns3"]})
+                if spd is not None:
+                    point.speed_mps = float(spd.text)
+        except AttributeError:
+            pass
+        try:
+            pwr = point_record.find("Extensions", NAMESPACES)
+            if pwr is not None:
+                pwr = pwr.find("TPX", {"": NAMESPACES["ns3"]}).find("Watts", {"": NAMESPACES["ns3"]})
+                if pwr is not None:
+                    point.power_watts = int(pwr.text)
+        except AttributeError:
+            pass
+        return point
 
     def lap_stats(self, total_time_s=None, distance_m=None):
         '''
@@ -109,7 +226,7 @@ class Tcx():
         '''
         Writes tcx file to disk.
         '''
-        out = et.tostring(self.tcx, "utf-8")
+        out = et.tostring(self.tcx, xml_declaration=True, encoding="utf-8")
         out = minidom.parseString(out).toprettyxml(indent="    ")
         with open(self.file_name, "w") as f:
             f.write(out)
@@ -117,21 +234,33 @@ class Tcx():
 
 if __name__ == "__main__":
     file = Tcx()
+    file.start_log("asdf.tcx")
     file.start_activity(activity_type=Tcx.ActivityType.OTHER)
-    file.add_point(
-      lat_deg=51.5014600,
-      lon_deg=-0.1402330,
-      altitude_m=12.2,
-      distance_m=2.0,
-      heartrate_bpm=92,
-      cadence_rpm=39,
-      speed_mps=0.0,
-      power_watts=92)
-    file.lap_stats(total_time_s=10, distance_m=150)
-    file.flush()
-    file.add_point(
+    file.add_point(Point(
+        lat_deg=51.5014600,
+        lon_deg=-0.1402330,
+        altitude_m=12.2,
+        distance_m=2.0,
         heartrate_bpm=92,
         cadence_rpm=39,
-        power_watts=92)
+        speed_mps=0.0,
+        power_watts=92))
+    file.lap_stats(total_time_s=10, distance_m=150)
+    file.flush()
+    file.add_point(Point(
+        heartrate_bpm=92,
+        cadence_rpm=39,
+        power_watts=92))
     file.lap_stats(total_time_s=104, distance_m=123)
     file.flush()
+
+    # file_name = "sample_files/20201205_091538.tcx"
+    # file_name = "sample_files/Jon_s_Mix.tcx"
+    file_name = "sample_files/Tried_out_the_workout_course_.tcx"
+    file = Tcx()
+    file.open_log(file_name)
+    file.get_activity()
+    p = file.get_next_point()
+    while p:
+        print(p)
+        p = file.get_next_point()
