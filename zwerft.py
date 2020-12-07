@@ -178,30 +178,30 @@ while True:
 
 # Set up main window
 layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
-                             key="-TIME-",justification="L", font="20"),
+                             key="-TIME-",justification="L"),
            sg.T("HR:"), sg.T("000",(3,1),relief="raised",
                              key="-HEARTRATE-",justification="L",
-                             text_color="black", font="20"),
+                             text_color="black"),
            sg.T("Watts:"),sg.T("0000",(4,1),relief="raised",
                                key="-POWER-",justification="L",
-                               text_color="black", font="20"),
+                               text_color="black"),
            sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
                                  key="-CADENCE-",justification="L",
-                                 text_color="black", font="20"),
+                                 text_color="black"),
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
-                                 key="-TARGET-",justification="L", font="20"),
+                                 key="-TARGET-",justification="L"),
            sg.T("Remaining:"),sg.T("MM:SS",(5,1),relief="raised",
-                                 key="-REMAINING-",justification="L", font="20"),
+                                 key="-REMAINING-",justification="L"),
            sg.Button('', image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
-           [sg.Graph(canvas_size=(30,100), graph_bottom_left=(0,0), graph_top_right=(50,100),
+           [sg.Graph(canvas_size=(20,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
                      background_color="black", key="-BUG-"),
-           sg.Graph(canvas_size=(800, 100), graph_bottom_left=(0, 0),
-                     graph_top_right=(800, 100), background_color="black",
+           sg.Graph(canvas_size=(800, 60), graph_bottom_left=(0, 0),
+                     graph_top_right=(800, 60), background_color="black",
                      key="-PROFILE-")]]
 window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
-    alpha_channel=0.9, finalize=True, element_padding=(0,0))
+    alpha_channel=0.9, finalize=True, element_padding=(0,0), font="20")
 power_bug = BugIndicator(window["-BUG-"])
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
