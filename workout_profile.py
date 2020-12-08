@@ -3,6 +3,16 @@ Generates workout profiles from a description file.
 '''
 import yaml
 
+ZONES = [0, 0.6, 0.75, 0.9, 1.05, 1.18, 100]
+def get_zone(pwr):
+    '''
+    Returns the power zone number, given a normalized power (0.0-1.0, where 1.0=FTP).
+    '''
+    for i in range (0,len(ZONES)-1):
+        if ZONES[i] < pwr <= ZONES[i+1]:
+            return i
+    return None
+
 class Workout():
     '''
     Reads in workout profile files and tracks progress through
@@ -86,6 +96,19 @@ class Workout():
             cur_block = (block["duration"], block["start"], block["end"])
             all_blocks.append(cur_block)
         return all_blocks
+
+    def get_min_max_power(self):
+        '''
+        Returns the minimum and maximum power from a power profile.
+        '''
+        max_p = 0
+        min_p = 100
+        all_blocks = self.get_all_blocks()
+        for block in all_blocks:
+            _, start, end = block
+            max_p = max(max_p, start, end)
+            min_p = min(min_p, start, end)
+        return min_p, max_p
 
     @property
     def duration_s(self):

@@ -3,32 +3,9 @@ Draws a workout power profile and plots traces on top of it.
 """
 import PySimpleGUI as sg
 import numpy as np
-from workout_profile import Workout
+from workout_profile import Workout, get_zone
 
-ZONES = [0, 0.6, 0.75, 0.9, 1.05, 1.18, 100]
 ZONE_COLORS = ["gray", "blue", "green", "yellow", "orange", "red"]
-
-def get_min_max_power(all_blocks):
-    '''
-    Returns the minimum and maximum power from a power profile.
-    '''
-    max_p = 0
-    min_p = 100
-    for block in all_blocks:
-        _, start, end = block
-        max_p = max(max_p, start, end)
-        min_p = min(min_p, start, end)
-    return min_p, max_p
-
-
-def get_zone(pwr):
-    '''
-    Returns the power zone number, given a normalized power (0.0-1.0, where 1.0=FTP).
-    '''
-    for i in range (0,len(ZONES)-1):
-        if ZONES[i] < pwr <= ZONES[i+1]:
-            return i
-    return None
 
 def plot_blocks(graph, all_blocks, y_lims):
     '''
@@ -85,7 +62,7 @@ if __name__ == '__main__':
         key='-PROFILE-')]]
     window = sg.Window('Workout Profile', layout, finalize=True)
 
-    min_power, max_power = get_min_max_power(blocks)
+    min_power, max_power = workout.get_min_max_power()
     min_power *= 0.8
     max_power *= 1.2
     plot_blocks(window['-PROFILE-'], blocks, (min_power, max_power))

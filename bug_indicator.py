@@ -1,12 +1,20 @@
 """
-asdf
+Creates a vertical "bug" indicator with a centered target indicator
+and a current value indicator.
 """
 
 import PySimpleGUI as sg
 
 class BugIndicator():
+    '''
+    The bug indicator, which plots one or more bugs on it.
+    '''
     class Bug():
-        def __init__(self, graph, height_px=10, width_px=15, left=True, color="red", level_percent=0.5):
+        '''
+        A bug to be plotted on the bug indicator.
+        '''
+        def __init__(self, graph, name, height_px, width_px, left, color, level_percent):
+            self.name = name
             self.height_px = height_px
             self.width_px = width_px
             self.left = left
@@ -31,25 +39,40 @@ class BugIndicator():
             self.polygon = graph.draw_polygon(poly, fill_color=self.color)
 
         def move(self, graph, level_percent):
-            max_width_px, max_height_px = graph.Size
+            '''
+            Move the bug to the given position on the graph.
+            Saturate the position to [0.0-1.0].
+            '''
+            if level_percent < 0.0:
+                level_percent = 0
+            elif level_percent > 1.0:
+                level_percent = 1.0
+            _, max_height_px = graph.Size
             bug_move_px = max_height_px * (level_percent - self.level_percent)
             graph.move_figure(self.line, 0, bug_move_px)
             graph.move_figure(self.polygon, 0, bug_move_px)
             self.level_percent = level_percent
 
-    def __init__(self, graph, value=0.5):
+    def __init__(self, graph):
         self.graph = graph
-        self.target_bug = BugIndicator.Bug(graph=graph, color="blue")
-        self.output_bug = BugIndicator.Bug(graph=graph, color="red", left=False)
+        self.bugs = {}
 
-    def update(self, value):
-        if value < 0.0:
-            value = 0
-        elif value > 1.0:
-            value = 1.0
-        self.output_bug.move(self.graph, value)
+    def add_bug(self, name, height_px=10, width_px=15, left=True, color="red", level_percent=0.5):
+        '''
+        Adds a new named bug to the graph or overwrites an existing one.
+        '''
+        new_bug = BugIndicator.Bug(self.graph, name, height_px,
+                                   width_px, left, color, level_percent)
+        self.bugs[name] = new_bug
+
+    def update(self, name, value):
+        '''
+        Update the bug's position, accessing the bug by name.
+        '''
+        self.bugs[name].move(self.graph, value)
 
 if __name__ == "__main__":
+    import sys
     layout = [[sg.Graph(
             canvas_size=(50, 100),
             graph_bottom_left=(0, 0),
@@ -61,10 +84,14 @@ if __name__ == "__main__":
 
     signal = -0.1
     bug = BugIndicator(window["-POWER-"])
+    bug.add_bug("target_power", color="blue", level_percent=0.5)
+    bug.add_bug("current_power", color="red", level_percent=0.5, left=False)
+    bug.add_bug("other_indicator", color="cyan")
     while True:
-        bug.update(signal)
+        bug.update("current_power", signal)
+        bug.update("other_indicator", 1.0-signal)
         signal +=0.01
         event, values = window.read(timeout=100)
         if event == sg.WIN_CLOSED:
             window.close()
-            exit()
+            sys.exit()

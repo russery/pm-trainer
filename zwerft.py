@@ -123,7 +123,7 @@ def _settings_dialog(config):
 def _get_workout_from_config(config):
     # Initialize workout plot with workout profile
     wkout = Workout(config.get("Workout"))
-    min_p, max_p = profile_plotter.get_min_max_power(wkout.get_all_blocks())
+    min_p, max_p = wkout.get_min_max_power()
     return wkout, min_p, max_p
 
 def _start_log(ldir):
@@ -203,6 +203,8 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
 window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
     alpha_channel=0.9, finalize=True, element_padding=(0,0), font="20")
 power_bug = BugIndicator(window["-BUG-"])
+power_bug.add_bug("TARGET_POWER", level_percent=0.5, color="blue")
+power_bug.add_bug("CURRENT_POWER", level_percent=0.5, left=False, color="red")
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
@@ -256,11 +258,13 @@ while True:
         elapsed_time = dt.now() - start_time
         # HACKY TEST CODE:
         if TEST_MODE:
-            while (p.time - test_start_time) <= elapsed_time:
+            while ((p is not None) and
+                ((p.time - test_start_time) <= elapsed_time)):
                 heartrate = p.heartrate_bpm
                 power = p.power_watts
                 cadence = p.cadence_rpm
                 p = test_data.get_next_point()
+
 
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
@@ -299,7 +303,8 @@ while True:
 
         # Update power bug
         if power:
-            power_bug.update((power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
+            power_bug.update("CURRENT_POWER",
+                             (power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
