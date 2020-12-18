@@ -14,7 +14,7 @@ from workout_profile import Workout
 from tcx_file import Tcx, Point
 from bug_indicator import BugIndicator
 
-TEST_MODE = True
+TEST_MODE = False
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -309,7 +309,7 @@ while True:
         # Update log file
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
             (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
-            logfile.add_point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power)
+            logfile.add_point(Point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power))
             logfile.lap_stats(total_time_s=elapsed_time.seconds)
             logfile.flush()
 
