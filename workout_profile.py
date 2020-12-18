@@ -60,6 +60,8 @@ class Workout():
         '''
         Returns the time left in the current workout block
         '''
+        if curr_time_s > self._duration_s:
+            return 0
         ind, block = self._get_current_block(curr_time_s)
         if (ind == None) or (block == None):
             return 0

@@ -1,10 +1,11 @@
 """
 Logs trainer rides or something.
 """
+import argparse
 import os
 import sys
 import time
-from datetime import datetime as dt
+import datetime as dt
 import PySimpleGUI as sg
 import profile_plotter
 import settings
@@ -13,8 +14,6 @@ import assets.icons
 from workout_profile import Workout
 from tcx_file import Tcx, Point
 from bug_indicator import BugIndicator
-
-TEST_MODE = False
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -30,6 +29,41 @@ DEFAULT_SETTINGS = {
 PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits
 HEART_RATE_LIMITS = (100, 200)
 POWER_BUG_LIMITS_WATTS = 100 # Vertical size of power bug in watts
+
+parser = argparse.ArgumentParser(description='Command line options')
+parser.add_argument("-r", "--replay", default=None,
+                    help="Enable replay mode and pass in file to replay")
+parser.add_argument("-s", "--speed", default=2.0, type=float,
+                    help="Enable replay mode and pass in file to replay")
+args = parser.parse_args()
+if args.replay:
+    REPLAY_MODE = True
+    if not os.path.isfile(args.replay):
+        print("\nERROR: Invalid file {}".format(args.replay))
+        sys.exit()
+    print("\nReplaying {} at {:2.1f}x speed".format(args.replay, args.speed))
+else:
+    REPLAY_MODE = False
+
+class Timer():
+    def __init__(self, replay=False, tick_ms=100.0):
+        self.replay=replay
+        self.start_time = None
+        self.elapsed_time = None
+        self.tick_ms = tick_ms
+
+    def start(self, time=dt.datetime.now()):
+        self.start_time = time
+        self.elapsed_time = dt.timedelta(seconds=0)
+
+    def get_time(self):
+        return self.elapsed_time
+
+    def update(self):
+        if self.replay:
+            self.elapsed_time += dt.timedelta(seconds=self.tick_ms / 1000.0)
+        else:
+            self.elapsed_time = dt.datetime.now() - self.start_time
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
@@ -131,7 +165,7 @@ def _start_log(ldir):
         os.makedirs(ldir)
     lfile = Tcx()
     lfile.start_log("{}/{}.tcx".format(
-        ldir, dt.now().strftime("%Y%m%d_%H%M%S")))
+        ldir, dt.datetime.now().strftime("%Y%m%d_%H%M%S")))
     lfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
     return lfile
 
@@ -212,19 +246,22 @@ _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
 log_dir = cfg.get("LogDirectory")
 logfile = _start_log(log_dir)
 
-start_time = dt.now()
+update_ms = 1000 / float(cfg.get("UpdateRateHz"))
+if REPLAY_MODE:
+    update_ms = 50
+ftp_watts = float(cfg.get("FTPWatts"))
 
 # Main loop
-# HACKY TESTING CODE
-if TEST_MODE:
-    test_data = Tcx()
-    test_data.open_log("sample_files/20201205_091538.tcx")
-    test_data.get_activity()
-    p = test_data.get_next_point()
-    test_start_time = p.time
+if REPLAY_MODE:
+    t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
+    replay_data = Tcx()
+    replay_data.open_log(args.replay)
+    replay_data.get_activity()
+    p = replay_data.get_next_point()
+    t.start(time=p.time)
+else:
+    t.start()
 
-update_ms = 1000 / float(cfg.get("UpdateRateHz"))
-ftp_watts = float(cfg.get("FTPWatts"))
 while True:
     try:
         # Handle window events
@@ -247,32 +284,33 @@ while True:
                 logfile = _start_log(log_dir)
             # Update other values:
             update_ms = 1000 / float(cfg.get("UpdateRateHz"))
+            if REPLAY_MODE:
+                update_ms = 50
             ftp_watts = float(cfg.get("FTPWatts"))
+
+        # Update current time
+        t.update()
 
         # Update text display:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
 
-
-        elapsed_time = dt.now() - start_time
-        # HACKY TEST CODE:
-        if TEST_MODE:
-            while ((p is not None) and
-                ((p.time - test_start_time) <= elapsed_time)):
+        if REPLAY_MODE:
+            while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
                 power = p.power_watts
                 cadence = p.cadence_rpm
-                p = test_data.get_next_point()
+                p = replay_data.get_next_point()
 
 
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
         window["-CADENCE-"].update(cadence)
         window["-TIME-"].update("{:02d}:{:02d}:{:02d}".format(
-            int(elapsed_time.seconds/3600) % 24,
-            int(elapsed_time.seconds/60) % 60,
-            elapsed_time.seconds % 60))
+            int(t.get_time().seconds/3600) % 24,
+            int(t.get_time().seconds/60) % 60,
+            t.get_time().seconds % 60))
 
         # Handle sensor status:
         _update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
@@ -280,18 +318,18 @@ while True:
         _update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
 
         # Update workout params:
-        power_target = workout.power_target(elapsed_time.seconds)
+        power_target = workout.power_target(t.get_time().seconds)
         if power_target:
             power_target = "{:4.0f}".format(power_target*ftp_watts)
         else:
             power_target = ""
         window['-TARGET-'].update(power_target)
-        remain_s = workout.block_time_remaining(elapsed_time.seconds)
+        remain_s = workout.block_time_remaining(t.get_time().seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
 
         # Update plot:
-        norm_time = elapsed_time.seconds / workout.duration_s
+        norm_time = t.get_time().seconds / workout.duration_s
         if power:
             _plot_trace(window["-PROFILE-"],
                 (norm_time, power / ftp_watts),
@@ -310,7 +348,7 @@ while True:
         if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
             (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
             logfile.add_point(Point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power))
-            logfile.lap_stats(total_time_s=elapsed_time.seconds)
+            logfile.lap_stats(total_time_s=t.get_time().seconds)
             logfile.flush()
 
     except AntSensors.SensorError as e:
