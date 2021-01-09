@@ -18,7 +18,7 @@ from bug_indicator import BugIndicator
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
-   "Workout": "workouts/sweet_spot.yaml",
+   "Workout": "workouts/short_stack.yaml",
 
    # Window / system settings
    "LogDirectory": "./logs",
@@ -252,8 +252,8 @@ if REPLAY_MODE:
 ftp_watts = float(cfg.get("FTPWatts"))
 
 # Main loop
+t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
 if REPLAY_MODE:
-    t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
     replay_data = Tcx()
     replay_data.open_log(args.replay)
     replay_data.get_activity()

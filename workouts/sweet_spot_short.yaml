@@ -1,0 +1,35 @@
+name: Sweet Spot Short
+description: Alternate between 85% and 95% of FTP
+duration_s: 3000
+blocks: 
+  - duration: 0.1
+    start: 0.5
+    end: 0.85
+  # 4x 5 mins @ 95% and 85%
+  - duration: 0.1
+    start: 0.95
+    end: 0.95
+  - duration: 0.1
+    start: 0.85
+    end: 0.85
+  - duration: 0.1
+    start: 0.95
+    end: 0.95
+  - duration: 0.1
+    start: 0.85
+    end: 0.85
+  - duration: 0.1
+    start: 0.95
+    end: 0.95
+  - duration: 0.1
+    start: 0.85
+    end: 0.85
+  - duration: 0.1
+    start: 0.95
+    end: 0.95
+  - duration: 0.1
+    start: 0.85
+    end: 0.85
+  - duration: 0.1 
+    start: 0.75
+    end: 0.50
