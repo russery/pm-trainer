@@ -14,10 +14,13 @@ import assets.icons
 from workout_profile import Workout
 from tcx_file import Tcx, Point
 from bug_indicator import BugIndicator
+from bike_sim import BikeSim
 
 DEFAULT_SETTINGS = {
    # User / session settings:
    "FTPWatts": 200,
+   "RiderWeightKg": 70,
+   "BikeWeightKg": 10,
    "Workout": "workouts/short_stack.yaml",
 
    # Window / system settings
@@ -33,7 +36,7 @@ POWER_BUG_LIMITS_WATTS = 100 # Vertical size of power bug in watts
 parser = argparse.ArgumentParser(description='Command line options')
 parser.add_argument("-r", "--replay", default=None,
                     help="Enable replay mode and pass in file to replay")
-parser.add_argument("-s", "--speed", default=2.0, type=float,
+parser.add_argument("-s", "--speed", default=1.0, type=float,
                     help="Enable replay mode and pass in file to replay")
 args = parser.parse_args()
 if args.replay:
@@ -222,6 +225,10 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
            sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
                                  key="-CADENCE-",justification="L",
                                  text_color="black"),
+           sg.T("Speed:"),sg.T("0.0",(3,1),relief="raised",
+                                 key="-SPEED-",justification="L"),
+           sg.T("Distance:"),sg.T("000",(3,1),relief="raised",
+                                 key="-DISTANCE-",justification="L"),
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
                                  key="-TARGET-",justification="L"),
            sg.T("Remaining:"),sg.T("MM:SS",(5,1),relief="raised",
@@ -262,6 +269,8 @@ if REPLAY_MODE:
 else:
     t.start()
 
+sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))))
+
 while True:
     try:
         # Handle window events
@@ -288,14 +297,13 @@ while True:
                 update_ms = 50
             ftp_watts = float(cfg.get("FTPWatts"))
 
-        # Update current time
+        # Update current time:
         t.update()
 
         # Update text display:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
-
         if REPLAY_MODE:
             while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
@@ -303,6 +311,9 @@ while True:
                 cadence = p.cadence_rpm
                 p = replay_data.get_next_point()
 
+        # Update speed and distance:
+        if power:
+            sim.update(power, t.get_time().seconds)
 
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
@@ -311,6 +322,8 @@ while True:
             int(t.get_time().seconds/3600) % 24,
             int(t.get_time().seconds/60) % 60,
             t.get_time().seconds % 60))
+        window["-SPEED-"].update("{:3.1f}".format(sim.speed_miph))
+        window["-DISTANCE-"].update("{:3.1f}".format(sim.total_distance_mi))
 
         # Handle sensor status:
         _update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
