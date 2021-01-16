@@ -1,6 +1,6 @@
-"""
+'''
 Logs trainer rides or something.
-"""
+'''
 import argparse
 import os
 import sys
@@ -49,20 +49,35 @@ else:
     REPLAY_MODE = False
 
 class Timer():
+    '''
+    A timer, that returns time as a datetime timedelta. The timer only updates
+    when the update() method is called, so that the same time can be used in
+    multiple places in a loop.
+    '''
     def __init__(self, replay=False, tick_ms=100.0):
         self.replay=replay
         self.start_time = None
         self.elapsed_time = None
         self.tick_ms = tick_ms
 
-    def start(self, time=dt.datetime.now()):
-        self.start_time = time
+    def start(self, current_time=dt.datetime.now()):
+        '''
+        Start the timer.
+        '''
+        self.start_time = current_time
         self.elapsed_time = dt.timedelta(seconds=0)
 
     def get_time(self):
+        '''
+        Return the timedelta from when the timer was started to
+        when it was updated.
+        '''
         return self.elapsed_time
 
     def update(self):
+        '''
+        Update the elapsed time.
+        '''
         if self.replay:
             self.elapsed_time += dt.timedelta(seconds=self.tick_ms / 1000.0)
         else:
@@ -82,9 +97,9 @@ def _validate_int_range(val, val_name, val_range, error_list):
             val_name, val, val_range[0], val_range[-1]))
 
 def _exit_zwerft(status=0):
-    """
+    '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
-    """
+    '''
     if logfile:
         logfile.flush()
     if window:
@@ -94,9 +109,9 @@ def _exit_zwerft(status=0):
     sys.exit(status)
 
 def _update_sensor_status_indicator(element, sensor_status):
-    """
+    '''
     Change color of the selected element based on the status of an ANT+ sensor.
-    """
+    '''
     if sensor_status == AntSensors.SensorStatus.State.NOTCONNECTED:
         element.update(background_color="red")
     elif sensor_status == AntSensors.SensorStatus.State.CONNECTED:
@@ -105,6 +120,9 @@ def _update_sensor_status_indicator(element, sensor_status):
         element.update(background_color="yellow")
 
 def _settings_dialog(config):
+    '''
+    A dialog box to change persistent settings saved in the config file.
+    '''
     FTP_RANGE = range(1,1000)
     UPDATE_HZ_RANGE = range(1,16,1)
     temp_workout = Workout(config.get("Workout"))
@@ -156,14 +174,21 @@ def _settings_dialog(config):
                 settings_window.close()
                 config.write_settings(config.get("SettingsFile"))
                 return
+        else:
+            print(e)
 
 def _get_workout_from_config(config):
-    # Initialize workout plot with workout profile
+    '''
+    Initialize workout plot with workout profile
+    '''
     wkout = Workout(config.get("Workout"))
     min_p, max_p = wkout.get_min_max_power()
     return wkout, min_p, max_p
 
 def _start_log(ldir):
+    '''
+    Initialize and return a TCX logfile.
+    '''
     if not os.path.exists(ldir):
         os.makedirs(ldir)
     lfile = Tcx()
@@ -173,14 +198,23 @@ def _start_log(ldir):
     return lfile
 
 def _scale_plot_margins(y_lims):
+    '''
+    Scale the vertical plot and apply standard margins to it.
+    '''
     return ((y_lims[0]*(1 - PLOT_MARGINS_PERCENT/100)),
                 y_lims[1]*(1 + PLOT_MARGINS_PERCENT/100))
 
 def _plot_workout(graph, wkout, y_lims):
+    '''
+    Plot a workout on the graph.
+    '''
     y_lims = _scale_plot_margins(y_lims)
     profile_plotter.plot_blocks(graph, wkout.get_all_blocks(), y_lims)
 
 def _plot_trace(graph, val, y_lims, size=3, color='red'):
+    '''
+    Plot a trace on the graph.
+    '''
     y_lims = _scale_plot_margins(y_lims)
     profile_plotter.plot_trace(graph, val, y_lims, size=size, color=color)
 
@@ -265,7 +299,7 @@ if REPLAY_MODE:
     replay_data.open_log(args.replay)
     replay_data.get_activity()
     p = replay_data.get_next_point()
-    t.start(time=p.time)
+    t.start(current_time=p.time)
 else:
     t.start()
 
@@ -300,7 +334,7 @@ while True:
         # Update current time:
         t.update()
 
-        # Update text display:
+        # Update sensor variables:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
@@ -315,6 +349,7 @@ while True:
         if power:
             sim.update(power, t.get_time().seconds)
 
+        # Update text display:
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
         window["-CADENCE-"].update(cadence)
@@ -358,9 +393,12 @@ while True:
                              (power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
         # Update log file
-        if ((sensors.heart_rate_status == AntSensors.SensorStatus.State.CONNECTED) and
-            (sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED)):
-            logfile.add_point(Point(heartrate_bpm=heartrate, cadence_rpm=cadence, power_watts=power))
+        if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+            logfile.add_point(Point(heartrate_bpm=heartrate,
+                                    cadence_rpm=cadence,
+                                    power_watts=power,
+                                    distance_m=sim.distance_m,
+                                    speed_mps=sim.speed_mps))
             logfile.lap_stats(total_time_s=t.get_time().seconds)
             logfile.flush()
 
