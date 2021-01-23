@@ -18,7 +18,7 @@ from bike_sim import BikeSim
 
 DEFAULT_SETTINGS = {
    # User / session settings:
-   "FTPWatts": 200,
+   "FTPWatts": 230,
    "RiderWeightKg": 70,
    "BikeWeightKg": 10,
    "Workout": "workouts/short_stack.yaml",
@@ -152,6 +152,7 @@ def _settings_dialog(config):
 
     while True:
         e, v = settings_window.read()
+        time.sleep(0.5)
         if e in (sg.WIN_CLOSED, "-CANCEL-"):
             settings_window.close()
             return
@@ -259,9 +260,9 @@ layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
            sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
                                  key="-CADENCE-",justification="L",
                                  text_color="black"),
-           sg.T("Speed:"),sg.T("0.0",(3,1),relief="raised",
+           sg.T("Speed:"),sg.T("0.0",(4,1),relief="raised",
                                  key="-SPEED-",justification="L"),
-           sg.T("Distance:"),sg.T("000",(3,1),relief="raised",
+           sg.T("Distance:"),sg.T("000",(4,1),relief="raised",
                                  key="-DISTANCE-",justification="L"),
            sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
                                  key="-TARGET-",justification="L"),
@@ -305,6 +306,8 @@ else:
 
 sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))))
 
+iters = 0
+
 while True:
     try:
         # Handle window events
@@ -312,9 +315,9 @@ while True:
         if event == sg.WIN_CLOSED:
             _exit_zwerft()
         if event == "-SETTINGS-":
-            window.Disappear()
+            #window.Disappear()
             _settings_dialog(cfg)
-            window.Reappear()
+            #window.Reappear()
             # Update workout plot:
             w_new, min_new, max_new = _get_workout_from_config(cfg)
             if w_new.name != workout.name:
@@ -346,7 +349,7 @@ while True:
                 p = replay_data.get_next_point()
 
         # Update speed and distance:
-        if power:
+        if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
             sim.update(power, t.get_time().seconds)
 
         # Update text display:
@@ -392,15 +395,19 @@ while True:
             power_bug.update("CURRENT_POWER",
                              (power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
+
         # Update log file
-        if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
-            logfile.add_point(Point(heartrate_bpm=heartrate,
-                                    cadence_rpm=cadence,
-                                    power_watts=power,
-                                    distance_m=sim.distance_m,
-                                    speed_mps=sim.speed_mps))
-            logfile.lap_stats(total_time_s=t.get_time().seconds)
-            logfile.flush()
+        iters += 1
+        if iters % int(cfg.get("UpdateRateHz")) == 0: #HACKY HACK HACK
+            #TODO: Limit logging to 1Hz more intelligently
+            if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+                logfile.add_point(Point(heartrate_bpm=heartrate,
+                                        cadence_rpm=cadence,
+                                        power_watts=power,
+                                        distance_m=sim.total_distance_m,
+                                        speed_mps=sim.speed_mps))
+                logfile.lap_stats(total_time_s=t.get_time().seconds)
+                logfile.flush()
 
     except AntSensors.SensorError as e:
         if e.err_type == AntSensors.SensorError.ErrorType.USB:

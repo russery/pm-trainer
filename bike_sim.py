@@ -32,7 +32,10 @@ class BikeSim():
         # Calculate rolling resistance
         G_mps2 = 9.80655 # Gravitational acceleration constant, assume we're on a flat surface
         CRR = 0.005 # Coefficient of rolling resistance, varies with tire type and surface
-        Fr_N = G_mps2 * self._weight_kg * CRR
+        if self._speed_mps > 0.0:
+            Fr_N = G_mps2 * self._weight_kg * CRR
+        else:
+            Fr_N = 0.0
 
         # Calculate aerodynamic drag
         CDA_m2 = 0.324 # Coefficient of aerodynamic drag times frontal area

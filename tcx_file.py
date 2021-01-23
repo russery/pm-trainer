@@ -134,25 +134,25 @@ class Tcx():
             point.time = _time_stamp()
         point_record = et.SubElement(self.current_lap, "Trackpoint")
         et.SubElement(point_record, "Time").text = point.time
-        if point.lat_deg and point.lon_deg:
+        if (point.lat_deg is not None) and (point.lon_deg is not None):
             position = et.SubElement(point_record, "Position")
             et.SubElement(position, "LatitudeDegrees").text = str(point.lat_deg)
             et.SubElement(position, "LongitudeDegrees").text = str(point.lon_deg)
-        if point.altitude_m:
+        if point.altitude_m is not None:
             et.SubElement(point_record, "AltitudeMeters").text = str(point.altitude_m)
-        if point.distance_m:
+        if point.distance_m is not None:
             et.SubElement(point_record, "DistanceMeters").text = str(point.distance_m)
-        if point.heartrate_bpm:
+        if point.heartrate_bpm is not None:
             hr = et.SubElement(point_record, "HeartRateBpm")
             et.SubElement(hr, "Value").text = str(point.heartrate_bpm)
-        if point.cadence_rpm:
+        if point.cadence_rpm is not None:
             et.SubElement(point_record, "Cadence").text = str(point.cadence_rpm)
-        if point.speed_mps or point.power_watts:
+        if (point.speed_mps is not None) or (point.power_watts is not None):
             ext = et.SubElement(et.SubElement(point_record, "Extensions"),"TPX")
             ext.set("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2")
-            if point.speed_mps:
+            if point.speed_mps is not None:
                 et.SubElement(ext, "Speed").text = str(point.speed_mps)
-            if point.power_watts:
+            if point.power_watts is not None:
                 et.SubElement(ext, "Watts").text = str(point.power_watts)
 
     def get_next_point(self):
