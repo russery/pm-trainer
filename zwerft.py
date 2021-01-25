@@ -249,30 +249,32 @@ while True:
     del sensors
 
 # Set up main window
-FONT = "Any 22"
-LABEL_FONT = "Any 14"
-layout = [[sg.T("Time:", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("HH:MM:SS", (8,1), relief="raised",
-                     key="-TIME-",justification="L", font=FONT),
-           sg.T("HR:", key="-HR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("000",(3,1),relief="raised",
+FONT = "Helvetica 22"
+LABEL_FONT = "Helvetica 14"
+layout = [[sg.T("HH:MM:SS", (8,1), pad=((20,20),(5,0)),
+                key="-TIME-",justification="L", font="Helvetica 30"),
+           sg.Frame("Sensors", pad=(5,0), layout=[
+           [sg.T("HR:", key="-HR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("000",(3,1),
                      key="-HEARTRATE-",justification="L", font=FONT),
            sg.T("Watts:", key="-PWR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("0000",(4,1),relief="raised",
-                     key="-POWER-",justification="L", font=FONT),
-           sg.T("Speed:", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("0.0",(4,1),relief="raised",
+                sg.T("0000",(4,1),
+                     key="-POWER-",justification="L", font=FONT)]]),
+           sg.Frame("Performance", pad=(5,0), layout=[
+           [sg.T("Speed:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0.0",(4,1),
                      key="-SPEED-",justification="L", font=FONT),
            sg.T("Distance:", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("000",(4,1),relief="raised",
-                     key="-DISTANCE-",justification="L", font=FONT),
-           sg.T("Target Power:", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("0000",(4,1),relief="raised",
+                sg.T("000",(4,1),
+                     key="-DISTANCE-",justification="L", font=FONT)]]),
+           sg.Frame("Workout", pad=(5,0), layout=[
+            [sg.T("Target Power:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0000",(4,1),
                      key="-TARGET-",justification="L", font=FONT),
            sg.T("Remaining:", pad=((10,0),(0,0)), font=LABEL_FONT),
-                sg.T("MM:SS",(5,1),relief="raised",
-                     key="-REMAINING-",justification="L", font=FONT),
-           sg.Button('', image_data=assets.icons.settings,
+                sg.T("MM:SS",(5,1),
+                     key="-REMAINING-",justification="L", font=FONT)]]),
+           sg.Button('', pad=((5,5),(10,0)), image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
            [sg.Graph(canvas_size=(30,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
@@ -285,7 +287,7 @@ window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
 power_bug = BugIndicator(window["-BUG-"])
 power_bug.add_bug("TARGET_POWER", level_percent=0.5, color="blue")
 power_bug.add_bug("CURRENT_POWER", level_percent=0.5,
-                  height_px=30, width_px=30, left=False, color="red")
+                  height_px=20, width_px=25, left=False, color="red")
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
