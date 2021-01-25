@@ -96,6 +96,13 @@ def _validate_int_range(val, val_name, val_range, error_list):
         error_list.append("Invalid {}: {} not between {}-{}".format(
             val_name, val, val_range[0], val_range[-1]))
 
+def _avg_val(running_avg_val, new_val, window=10):
+    '''
+    Keeps a running average of values, weighted by the window length
+    '''
+    diff = new_val - running_avg_val
+    return running_avg_val + (diff / window)
+
 def _exit_zwerft(status=0):
     '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
@@ -314,6 +321,8 @@ else:
 sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))))
 
 iters = 0
+avg_hr = None
+avg_power = None
 
 while True:
     try:
@@ -391,14 +400,21 @@ while True:
 
         # Update plot:
         norm_time = t.get_time().seconds / workout.duration_s
-        if power:
-            _plot_trace(window["-PROFILE-"],
-                (norm_time, power / ftp_watts),
-                (min_power, max_power), color="red")
         if heartrate:
+            if avg_hr is None:
+                avg_hr = heartrate
+            avg_hr = _avg_val(avg_hr, heartrate, window=3)
             _plot_trace(window["-PROFILE-"],
-                (norm_time, (heartrate-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
+                (norm_time, (avg_hr-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
                 (0,0.5), color="cyan")
+        if power:
+            if avg_power is None:
+                avg_power = power
+            avg_power = _avg_val(avg_power, power, window=5)
+            _plot_trace(window["-PROFILE-"],
+                (norm_time, avg_power / ftp_watts),
+                (min_power, max_power), color="red")
+
 
         # Update power bug
         if power:
