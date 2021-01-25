@@ -115,7 +115,7 @@ def _update_sensor_status_indicator(element, sensor_status):
     if sensor_status == AntSensors.SensorStatus.State.NOTCONNECTED:
         element.update(background_color="red")
     elif sensor_status == AntSensors.SensorStatus.State.CONNECTED:
-        element.update(background_color="green")
+        element.update(background_color=sg.theme_background_color())
     elif sensor_status == AntSensors.SensorStatus.State.STALE:
         element.update(background_color="yellow")
 
@@ -249,38 +249,43 @@ while True:
     del sensors
 
 # Set up main window
-layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
-                             key="-TIME-",justification="L"),
-           sg.T("HR:"), sg.T("000",(3,1),relief="raised",
-                             key="-HEARTRATE-",justification="L",
-                             text_color="black"),
-           sg.T("Watts:"),sg.T("0000",(4,1),relief="raised",
-                               key="-POWER-",justification="L",
-                               text_color="black"),
-           sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
-                                 key="-CADENCE-",justification="L",
-                                 text_color="black"),
-           sg.T("Speed:"),sg.T("0.0",(4,1),relief="raised",
-                                 key="-SPEED-",justification="L"),
-           sg.T("Distance:"),sg.T("000",(4,1),relief="raised",
-                                 key="-DISTANCE-",justification="L"),
-           sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
-                                 key="-TARGET-",justification="L"),
-           sg.T("Remaining:"),sg.T("MM:SS",(5,1),relief="raised",
-                                 key="-REMAINING-",justification="L"),
+FONT = "Any 22"
+LABEL_FONT = "Any 14"
+layout = [[sg.T("Time:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("HH:MM:SS", (8,1), relief="raised",
+                     key="-TIME-",justification="L", font=FONT),
+           sg.T("HR:", key="-HR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("000",(3,1),relief="raised",
+                     key="-HEARTRATE-",justification="L", font=FONT),
+           sg.T("Watts:", key="-PWR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0000",(4,1),relief="raised",
+                     key="-POWER-",justification="L", font=FONT),
+           sg.T("Speed:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0.0",(4,1),relief="raised",
+                     key="-SPEED-",justification="L", font=FONT),
+           sg.T("Distance:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("000",(4,1),relief="raised",
+                     key="-DISTANCE-",justification="L", font=FONT),
+           sg.T("Target Power:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0000",(4,1),relief="raised",
+                     key="-TARGET-",justification="L", font=FONT),
+           sg.T("Remaining:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("MM:SS",(5,1),relief="raised",
+                     key="-REMAINING-",justification="L", font=FONT),
            sg.Button('', image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
-           [sg.Graph(canvas_size=(20,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
+           [sg.Graph(canvas_size=(30,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
                      background_color="black", key="-BUG-"),
-           sg.Graph(canvas_size=(800, 60), graph_bottom_left=(0, 0),
-                     graph_top_right=(800, 60), background_color="black",
+           sg.Graph(canvas_size=(1000,60), graph_bottom_left=(0,0),
+                     graph_top_right=(1000,60), background_color="black",
                      key="-PROFILE-")]]
 window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
-    alpha_channel=0.9, finalize=True, element_padding=(0,0), font="20")
+    alpha_channel=0.9, finalize=True, element_padding=(0,0))
 power_bug = BugIndicator(window["-BUG-"])
 power_bug.add_bug("TARGET_POWER", level_percent=0.5, color="blue")
-power_bug.add_bug("CURRENT_POWER", level_percent=0.5, left=False, color="red")
+power_bug.add_bug("CURRENT_POWER", level_percent=0.5,
+                  height_px=30, width_px=30, left=False, color="red")
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
@@ -341,21 +346,25 @@ while True:
         heartrate = sensors.heartrate_bpm
         power = sensors.power_watts
         cadence = sensors.cadence_rpm
+        hr_status = sensors.heart_rate_status
+        pwr_status = sensors.power_meter_status
         if REPLAY_MODE:
             while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
+                if heartrate:
+                   hr_status = AntSensors.SensorStatus.State.CONNECTED
                 power = p.power_watts
-                cadence = p.cadence_rpm
+                if power:
+                   pwr_status = AntSensors.SensorStatus.State.CONNECTED
                 p = replay_data.get_next_point()
 
-        # Update speed and distance:
-        if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+        # Update speed and distance simulator:
+        if pwr_status == AntSensors.SensorStatus.State.CONNECTED:
             sim.update(power, t.get_time().seconds)
 
         # Update text display:
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
-        window["-CADENCE-"].update(cadence)
         window["-TIME-"].update("{:02d}:{:02d}:{:02d}".format(
             int(t.get_time().seconds/3600) % 24,
             int(t.get_time().seconds/60) % 60,
@@ -364,9 +373,8 @@ while True:
         window["-DISTANCE-"].update("{:3.1f}".format(sim.total_distance_mi))
 
         # Handle sensor status:
-        _update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
-        _update_sensor_status_indicator(window["-POWER-"], sensors.power_meter_status)
-        _update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
+        _update_sensor_status_indicator(window["-HR-LABEL-"], hr_status)
+        _update_sensor_status_indicator(window["-PWR-LABEL-"], pwr_status)
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
@@ -395,12 +403,11 @@ while True:
             power_bug.update("CURRENT_POWER",
                              (power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
-
         # Update log file
         iters += 1
         if iters % int(cfg.get("UpdateRateHz")) == 0: #HACKY HACK HACK
             #TODO: Limit logging to 1Hz more intelligently
-            if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+            if pwr_status == AntSensors.SensorStatus.State.CONNECTED:
                 logfile.add_point(Point(heartrate_bpm=heartrate,
                                         cadence_rpm=cadence,
                                         power_watts=power,
