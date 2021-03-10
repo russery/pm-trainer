@@ -107,12 +107,18 @@ def _exit_zwerft(status=0):
     '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     '''
-    if logfile:
+    try:
         logfile.flush()
-    if window:
+    except NameError:
+        pass
+    try:
         window.close()
-    if sensors:
+    except NameError:
+        pass
+    try:
         sensors.close()
+    except NameError:
+        pass
     sys.exit(status)
 
 def _update_sensor_status_indicator(element, sensor_status):
@@ -236,24 +242,25 @@ else:
 sg.theme("DarkBlack")
 
 # Attach to ANT+ dongle and start searching for sensors
-while True:
-    try:
-        sensors = AntSensors()
-        sensors.connect()
-        break
-    except AntSensors.SensorError as e:
-        if e.err_type == AntSensors.SensorError.ErrorType.USB:
-            sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle "
-             "- check USB connection and try again",
-                custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
-            # TODO: Keep the application open and try again - this should be recoverable
-            _exit_zwerft(-1)
-        else:
-            print("Caught sensor error {}".format(e.err_type))
-            _exit_zwerft(-1)
-    time.sleep(1)
-    sensors.close()
-    del sensors
+if not REPLAY_MODE:
+    while True:
+        try:
+            sensors = AntSensors()
+            sensors.connect()
+            break
+        except AntSensors.SensorError as e:
+            if e.err_type == AntSensors.SensorError.ErrorType.USB:
+                sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle "
+                 "- check USB connection and try again",
+                    custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
+                # TODO: Keep the application open and try again - this should be recoverable
+                _exit_zwerft(-1)
+            else:
+                print("Caught sensor error {}".format(e.err_type))
+                _exit_zwerft(-1)
+        time.sleep(1)
+        sensors.close()
+        del sensors
 
 # Set up main window
 FONT = "Helvetica 22"
@@ -354,19 +361,25 @@ while True:
         t.update()
 
         # Update sensor variables:
-        heartrate = sensors.heartrate_bpm
-        power = sensors.power_watts
-        cadence = sensors.cadence_rpm
-        hr_status = sensors.heart_rate_status
-        pwr_status = sensors.power_meter_status
-        if REPLAY_MODE:
+        if not REPLAY_MODE:
+            heartrate = sensors.heartrate_bpm
+            power = sensors.power_watts
+            cadence = sensors.cadence_rpm
+            hr_status = sensors.heart_rate_status
+            pwr_status = sensors.power_meter_status
+        else:
             while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
                 if heartrate:
-                   hr_status = AntSensors.SensorStatus.State.CONNECTED
+                    hr_status = AntSensors.SensorStatus.State.CONNECTED
+                else:
+                    hr_status = AntSensors.SensorStatus.State.NOTCONNECTED
                 power = p.power_watts
                 if power:
-                   pwr_status = AntSensors.SensorStatus.State.CONNECTED
+                    pwr_status = AntSensors.SensorStatus.State.CONNECTED
+                else:
+                    pwr_status = AntSensors.SensorStatus.State.NOTCONNECTED
+                cadence = p.cadence_rpm
                 p = replay_data.get_next_point()
 
         # Update speed and distance simulator:
