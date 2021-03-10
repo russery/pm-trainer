@@ -96,16 +96,29 @@ def _validate_int_range(val, val_name, val_range, error_list):
         error_list.append("Invalid {}: {} not between {}-{}".format(
             val_name, val, val_range[0], val_range[-1]))
 
+def _avg_val(running_avg_val, new_val, window=10):
+    '''
+    Keeps a running average of values, weighted by the window length
+    '''
+    diff = new_val - running_avg_val
+    return running_avg_val + (diff / window)
+
 def _exit_zwerft(status=0):
     '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     '''
-    if logfile:
+    try:
         logfile.flush()
-    if window:
+    except NameError:
+        pass
+    try:
         window.close()
-    if sensors:
+    except NameError:
+        pass
+    try:
         sensors.close()
+    except NameError:
+        pass
     sys.exit(status)
 
 def _update_sensor_status_indicator(element, sensor_status):
@@ -115,7 +128,7 @@ def _update_sensor_status_indicator(element, sensor_status):
     if sensor_status == AntSensors.SensorStatus.State.NOTCONNECTED:
         element.update(background_color="red")
     elif sensor_status == AntSensors.SensorStatus.State.CONNECTED:
-        element.update(background_color="green")
+        element.update(background_color=sg.theme_background_color())
     elif sensor_status == AntSensors.SensorStatus.State.STALE:
         element.update(background_color="yellow")
 
@@ -229,58 +242,66 @@ else:
 sg.theme("DarkBlack")
 
 # Attach to ANT+ dongle and start searching for sensors
-while True:
-    try:
-        sensors = AntSensors()
-        sensors.connect()
-        break
-    except AntSensors.SensorError as e:
-        if e.err_type == AntSensors.SensorError.ErrorType.USB:
-            sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle "
-             "- check USB connection and try again",
-                custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
-            # TODO: Keep the application open and try again - this should be recoverable
-            _exit_zwerft(-1)
-        else:
-            print("Caught sensor error {}".format(e.err_type))
-            _exit_zwerft(-1)
-    time.sleep(1)
-    sensors.close()
-    del sensors
+if not REPLAY_MODE:
+    while True:
+        try:
+            sensors = AntSensors()
+            sensors.connect()
+            break
+        except AntSensors.SensorError as e:
+            if e.err_type == AntSensors.SensorError.ErrorType.USB:
+                sg.Popup("USB Dongle Error", "Could not connect to ANT+ dongle "
+                 "- check USB connection and try again",
+                    custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
+                # TODO: Keep the application open and try again - this should be recoverable
+                _exit_zwerft(-1)
+            else:
+                print("Caught sensor error {}".format(e.err_type))
+                _exit_zwerft(-1)
+        time.sleep(1)
+        sensors.close()
+        del sensors
 
 # Set up main window
-layout = [[sg.T("Time:"), sg.T("HH:MM:SS", (8,1), relief="raised",
-                             key="-TIME-",justification="L"),
-           sg.T("HR:"), sg.T("000",(3,1),relief="raised",
-                             key="-HEARTRATE-",justification="L",
-                             text_color="black"),
-           sg.T("Watts:"),sg.T("0000",(4,1),relief="raised",
-                               key="-POWER-",justification="L",
-                               text_color="black"),
-           sg.T("Cadence:"),sg.T("000",(3,1),relief="raised",
-                                 key="-CADENCE-",justification="L",
-                                 text_color="black"),
-           sg.T("Speed:"),sg.T("0.0",(4,1),relief="raised",
-                                 key="-SPEED-",justification="L"),
-           sg.T("Distance:"),sg.T("000",(4,1),relief="raised",
-                                 key="-DISTANCE-",justification="L"),
-           sg.T("Target Power:"),sg.T("0000",(4,1),relief="raised",
-                                 key="-TARGET-",justification="L"),
-           sg.T("Remaining:"),sg.T("MM:SS",(5,1),relief="raised",
-                                 key="-REMAINING-",justification="L"),
-           sg.Button('', image_data=assets.icons.settings,
+FONT = "Helvetica 22"
+LABEL_FONT = "Helvetica 14"
+layout = [[sg.T("HH:MM:SS", (8,1), pad=((20,20),(5,0)),
+                key="-TIME-",justification="L", font="Helvetica 30"),
+           sg.Frame("Sensors", pad=(5,0), layout=[
+           [sg.T("HR:", key="-HR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("000",(3,1),
+                     key="-HEARTRATE-",justification="L", font=FONT),
+           sg.T("Watts:", key="-PWR-LABEL-", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0000",(4,1),
+                     key="-POWER-",justification="L", font=FONT)]]),
+           sg.Frame("Performance", pad=(5,0), layout=[
+           [sg.T("Speed:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0.0",(4,1),
+                     key="-SPEED-",justification="L", font=FONT),
+           sg.T("Distance:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("000",(4,1),
+                     key="-DISTANCE-",justification="L", font=FONT)]]),
+           sg.Frame("Workout", pad=(5,0), layout=[
+            [sg.T("Target Power:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("0000",(4,1),
+                     key="-TARGET-",justification="L", font=FONT),
+           sg.T("Remaining:", pad=((10,0),(0,0)), font=LABEL_FONT),
+                sg.T("MM:SS",(5,1),
+                     key="-REMAINING-",justification="L", font=FONT)]]),
+           sg.Button('', pad=((5,5),(10,0)), image_data=assets.icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
-           [sg.Graph(canvas_size=(20,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
+           [sg.Graph(canvas_size=(30,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
                      background_color="black", key="-BUG-"),
-           sg.Graph(canvas_size=(800, 60), graph_bottom_left=(0, 0),
-                     graph_top_right=(800, 60), background_color="black",
+           sg.Graph(canvas_size=(1000,60), graph_bottom_left=(0,0),
+                     graph_top_right=(1000,60), background_color="black",
                      key="-PROFILE-")]]
 window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
-    alpha_channel=0.9, finalize=True, element_padding=(0,0), font="20")
+    alpha_channel=0.9, finalize=True, element_padding=(0,0))
 power_bug = BugIndicator(window["-BUG-"])
 power_bug.add_bug("TARGET_POWER", level_percent=0.5, color="blue")
-power_bug.add_bug("CURRENT_POWER", level_percent=0.5, left=False, color="red")
+power_bug.add_bug("CURRENT_POWER", level_percent=0.5,
+                  height_px=20, width_px=25, left=False, color="red")
 
 workout, min_power, max_power = _get_workout_from_config(cfg)
 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
@@ -307,6 +328,8 @@ else:
 sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))))
 
 iters = 0
+avg_hr = None
+avg_power = None
 
 while True:
     try:
@@ -338,24 +361,34 @@ while True:
         t.update()
 
         # Update sensor variables:
-        heartrate = sensors.heartrate_bpm
-        power = sensors.power_watts
-        cadence = sensors.cadence_rpm
-        if REPLAY_MODE:
+        if not REPLAY_MODE:
+            heartrate = sensors.heartrate_bpm
+            power = sensors.power_watts
+            cadence = sensors.cadence_rpm
+            hr_status = sensors.heart_rate_status
+            pwr_status = sensors.power_meter_status
+        else:
             while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
+                if heartrate:
+                    hr_status = AntSensors.SensorStatus.State.CONNECTED
+                else:
+                    hr_status = AntSensors.SensorStatus.State.NOTCONNECTED
                 power = p.power_watts
+                if power:
+                    pwr_status = AntSensors.SensorStatus.State.CONNECTED
+                else:
+                    pwr_status = AntSensors.SensorStatus.State.NOTCONNECTED
                 cadence = p.cadence_rpm
                 p = replay_data.get_next_point()
 
-        # Update speed and distance:
-        if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+        # Update speed and distance simulator:
+        if pwr_status == AntSensors.SensorStatus.State.CONNECTED:
             sim.update(power, t.get_time().seconds)
 
         # Update text display:
         window["-HEARTRATE-"].update(heartrate)
         window["-POWER-"].update(power)
-        window["-CADENCE-"].update(cadence)
         window["-TIME-"].update("{:02d}:{:02d}:{:02d}".format(
             int(t.get_time().seconds/3600) % 24,
             int(t.get_time().seconds/60) % 60,
@@ -364,9 +397,8 @@ while True:
         window["-DISTANCE-"].update("{:3.1f}".format(sim.total_distance_mi))
 
         # Handle sensor status:
-        _update_sensor_status_indicator(window["-HEARTRATE-"], sensors.heart_rate_status)
-        _update_sensor_status_indicator(window["-POWER-"], sensors.power_meter_status)
-        _update_sensor_status_indicator(window["-CADENCE-"], sensors.power_meter_status)
+        _update_sensor_status_indicator(window["-HR-LABEL-"], hr_status)
+        _update_sensor_status_indicator(window["-PWR-LABEL-"], pwr_status)
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
@@ -381,26 +413,32 @@ while True:
 
         # Update plot:
         norm_time = t.get_time().seconds / workout.duration_s
-        if power:
-            _plot_trace(window["-PROFILE-"],
-                (norm_time, power / ftp_watts),
-                (min_power, max_power), color="red")
         if heartrate:
+            if avg_hr is None:
+                avg_hr = heartrate
+            avg_hr = _avg_val(avg_hr, heartrate, window=3)
             _plot_trace(window["-PROFILE-"],
-                (norm_time, (heartrate-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
+                (norm_time, (avg_hr-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
                 (0,0.5), color="cyan")
+        if power:
+            if avg_power is None:
+                avg_power = power
+            avg_power = _avg_val(avg_power, power, window=5)
+            _plot_trace(window["-PROFILE-"],
+                (norm_time, avg_power / ftp_watts),
+                (min_power, max_power), color="red")
+
 
         # Update power bug
         if power:
             power_bug.update("CURRENT_POWER",
                              (power - float(power_target))/POWER_BUG_LIMITS_WATTS + 0.5)
 
-
         # Update log file
         iters += 1
         if iters % int(cfg.get("UpdateRateHz")) == 0: #HACKY HACK HACK
             #TODO: Limit logging to 1Hz more intelligently
-            if sensors.power_meter_status == AntSensors.SensorStatus.State.CONNECTED:
+            if pwr_status == AntSensors.SensorStatus.State.CONNECTED:
                 logfile.add_point(Point(heartrate_bpm=heartrate,
                                         cadence_rpm=cadence,
                                         power_watts=power,
