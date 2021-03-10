@@ -63,7 +63,7 @@ class Workout():
         if curr_time_s > self._duration_s:
             return 0
         ind, block = self._get_current_block(curr_time_s)
-        if (ind == None) or (block == None):
+        if (ind is None) or (block is None):
             return 0
         block_duration_s = block["duration"] * self._duration_s
         dur = 0

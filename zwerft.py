@@ -96,12 +96,12 @@ def _validate_int_range(val, val_name, val_range, error_list):
         error_list.append("Invalid {}: {} not between {}-{}".format(
             val_name, val, val_range[0], val_range[-1]))
 
-def _avg_val(running_avg_val, new_val, window=10):
+def _avg_val(running_avg_val, new_val, avg_window=10):
     '''
     Keeps a running average of values, weighted by the window length
     '''
     diff = new_val - running_avg_val
-    return running_avg_val + (diff / window)
+    return running_avg_val + (diff / avg_window)
 
 def _exit_zwerft(status=0):
     '''
@@ -143,7 +143,7 @@ def _settings_dialog(config):
     settings_layout = [
         [sg.Frame("User",
             [[sg.T("FTP:"),
-              sg.Spin(values=[i for i in FTP_RANGE], key="-FTP-",
+              sg.Spin(values=list(FTP_RANGE), key="-FTP-",
                 initial_value=config.get("FTPWatts"), size=(4,1)) ],
             [sg.T("Sensors")]], vertical_alignment="t"),
         sg.Frame("Workout",
@@ -156,7 +156,7 @@ def _settings_dialog(config):
               sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
                 target="-LOGDIRECTORY-")],
             [sg.T("Update Rate (Hz):"),
-             sg.Spin(values=[i for i in UPDATE_HZ_RANGE], initial_value=config.get("UpdateRateHz"),
+             sg.Spin(values=list(UPDATE_HZ_RANGE), initial_value=config.get("UpdateRateHz"),
                 size=(3,1), key="-UPDATEHZ-")]])],
         [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
     ]
@@ -402,11 +402,8 @@ while True:
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
-        if power_target:
-            power_target = "{:4.0f}".format(power_target*ftp_watts)
-        else:
-            power_target = ""
-        window['-TARGET-'].update(power_target)
+        window['-TARGET-'].update(
+            " " if power_target is None else "{:4.0f}".format(power_target*ftp_watts))
         remain_s = workout.block_time_remaining(t.get_time().seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
@@ -416,14 +413,14 @@ while True:
         if heartrate:
             if avg_hr is None:
                 avg_hr = heartrate
-            avg_hr = _avg_val(avg_hr, heartrate, window=3)
+            avg_hr = _avg_val(avg_hr, heartrate, avg_window=3)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, (avg_hr-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
                 (0,0.5), color="cyan")
         if power:
             if avg_power is None:
                 avg_power = power
-            avg_power = _avg_val(avg_power, power, window=5)
+            avg_power = _avg_val(avg_power, power, avg_window=5)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, avg_power / ftp_watts),
                 (min_power, max_power), color="red")
