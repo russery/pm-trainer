@@ -33,6 +33,6 @@ class TestBikeSim(unittest.TestCase):
         # Simulator should reject unreasonably large power inputs
         with self.assertRaises(ValueError):
             self._pow_test(10001)
-        
+
 if __name__ == '__main__':
     unittest.main()

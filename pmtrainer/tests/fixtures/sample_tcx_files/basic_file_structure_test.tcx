@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns2="http://www.garmin.com/xmlschemas/UserProfile/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2" xmlns:ns5="http://www.garmin.com/xmlschemas/ActivityGoals/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+    <Activities>
+        <Activity Sport="OTHER">
+            <Id>2021-03-11T21:26:53Z</Id>
+            <Lap>
+                <Track>
+                    <Trackpoint>
+                        <Time>2021-03-11T21:26:53Z</Time>
+                        <Position>
+                            <LatitudeDegrees>51.50146</LatitudeDegrees>
+                            <LongitudeDegrees>-0.140233</LongitudeDegrees>
+                        </Position>
+                        <AltitudeMeters>12.2</AltitudeMeters>
+                        <DistanceMeters>2.0</DistanceMeters>
+                        <HeartRateBpm>
+                            <Value>92</Value>
+                        </HeartRateBpm>
+                        <Cadence>39</Cadence>
+                        <Extensions>
+                            <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+                                <Speed>0.0</Speed>
+                                <Watts>92</Watts>
+                            </TPX>
+                        </Extensions>
+                    </Trackpoint>
+                    <TotalTimeSeconds>10</TotalTimeSeconds>
+                    <DistanceMeters>150</DistanceMeters>
+                    <Trackpoint>
+                        <Time>2021-03-11T21:26:53Z</Time>
+                        <HeartRateBpm>
+                            <Value>92</Value>
+                        </HeartRateBpm>
+                        <Cadence>39</Cadence>
+                        <Extensions>
+                            <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+                                <Watts>92</Watts>
+                            </TPX>
+                        </Extensions>
+                    </Trackpoint>
+                    <TotalTimeSeconds>104</TotalTimeSeconds>
+                    <DistanceMeters>123</DistanceMeters>
+                </Track>
+            </Lap>
+        </Activity>
+    </Activities>
+</TrainingCenterDatabase>
