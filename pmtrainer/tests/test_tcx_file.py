@@ -1,6 +1,5 @@
 import unittest
 import tempfile
-import filecmp
 import os
 from ..tcx_file import Tcx, Point
 
@@ -44,16 +43,16 @@ class TestTcxFile(unittest.TestCase):
                 cadence_rpm=80,
                 power_watts=105)
         test_point_none = Point()
-        
+
         with tempfile.NamedTemporaryFile() as tmp_log:
             self.tcx.start_log(tmp_log.name)
             self.tcx.start_activity(activity_type=Tcx.ActivityType.OTHER)
-            
+
             # Add a few points
             self.tcx.add_point(test_point_full) # Point with all attrs set
             self.tcx.add_point(test_point_min) # Point with basic attrs set
             self.tcx.add_point(test_point_none) # Blank point with no attrs set
-            
+
             # Write the logfile to disk
             self.tcx.flush()
             print(open(tmp_log.name).read())
@@ -66,7 +65,7 @@ class TestTcxFile(unittest.TestCase):
                 self.assertIsNotNone(read_point)
                 print(read_point)
                 self._assert_point_equal(p, read_point)
-            
+
     def test_open_file(self):
         # Read in a TCX file generated from a Strava activity
         self.tcx.open_log(self.fixture_path + "Jon_s_Mix.tcx")
@@ -75,8 +74,6 @@ class TestTcxFile(unittest.TestCase):
             print(p)
             self.assertIsNotNone(p.time)
             p = self.tcx.get_next_point()
-                
-
 
 if __name__ == '__main__':
     unittest.main()
