@@ -1,5 +1,7 @@
 '''
-Logs trainer rides or something.
+Power-Mode Trainer:
+Logs bike trainer rides, enables displaying a workout profile with
+target power segments, and interfaces to bike trainer sensors over ANT+.
 '''
 import argparse
 import os
@@ -25,7 +27,7 @@ DEFAULT_SETTINGS = {
 
    # Window / system settings
    "LogDirectory": "./logs",
-   "SettingsFile": "zwerft_settings.ini",
+   "SettingsFile": "pm_trainer_settings.ini",
    "UpdateRateHz": 10
 }
 
@@ -50,7 +52,7 @@ else:
 
 class Timer():
     '''
-    A timer, that returns time as a datetime timedelta. The timer only updates
+    A timer that returns time as a datetime timedelta. The timer only updates
     when the update() method is called, so that the same time can be used in
     multiple places in a loop.
     '''
@@ -96,14 +98,14 @@ def _validate_int_range(val, val_name, val_range, error_list):
         error_list.append("Invalid {}: {} not between {}-{}".format(
             val_name, val, val_range[0], val_range[-1]))
 
-def _avg_val(running_avg_val, new_val, window=10):
+def _avg_val(running_avg_val, new_val, avg_window=10):
     '''
     Keeps a running average of values, weighted by the window length
     '''
     diff = new_val - running_avg_val
-    return running_avg_val + (diff / window)
+    return running_avg_val + (diff / avg_window)
 
-def _exit_zwerft(status=0):
+def _exit_app(status=0):
     '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     '''
@@ -143,7 +145,7 @@ def _settings_dialog(config):
     settings_layout = [
         [sg.Frame("User",
             [[sg.T("FTP:"),
-              sg.Spin(values=[i for i in FTP_RANGE], key="-FTP-",
+              sg.Spin(values=list(FTP_RANGE), key="-FTP-",
                 initial_value=config.get("FTPWatts"), size=(4,1)) ],
             [sg.T("Sensors")]], vertical_alignment="t"),
         sg.Frame("Workout",
@@ -156,7 +158,7 @@ def _settings_dialog(config):
               sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
                 target="-LOGDIRECTORY-")],
             [sg.T("Update Rate (Hz):"),
-             sg.Spin(values=[i for i in UPDATE_HZ_RANGE], initial_value=config.get("UpdateRateHz"),
+             sg.Spin(values=list(UPDATE_HZ_RANGE), initial_value=config.get("UpdateRateHz"),
                 size=(3,1), key="-UPDATEHZ-")]])],
         [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
     ]
@@ -254,10 +256,10 @@ if not REPLAY_MODE:
                  "- check USB connection and try again",
                     custom_text="Exit", line_width=50, keep_on_top=True, any_key_closes=True)
                 # TODO: Keep the application open and try again - this should be recoverable
-                _exit_zwerft(-1)
+                _exit_app(-1)
             else:
                 print("Caught sensor error {}".format(e.err_type))
-                _exit_zwerft(-1)
+                _exit_app(-1)
         time.sleep(1)
         sensors.close()
         del sensors
@@ -296,7 +298,7 @@ layout = [[sg.T("HH:MM:SS", (8,1), pad=((20,20),(5,0)),
            sg.Graph(canvas_size=(1000,60), graph_bottom_left=(0,0),
                      graph_top_right=(1000,60), background_color="black",
                      key="-PROFILE-")]]
-window = sg.Window("Zwerft", layout, keep_on_top=True, use_ttk_buttons=True,
+window = sg.Window("PM Trainer", layout, keep_on_top=True, use_ttk_buttons=True,
     alpha_channel=0.9, finalize=True, element_padding=(0,0))
 power_bug = BugIndicator(window["-BUG-"])
 power_bug.add_bug("TARGET_POWER", level_percent=0.5, color="blue")
@@ -336,7 +338,7 @@ while True:
         # Handle window events
         event, _ = window.read(timeout=update_ms)
         if event == sg.WIN_CLOSED:
-            _exit_zwerft()
+            _exit_app()
         if event == "-SETTINGS-":
             #window.Disappear()
             _settings_dialog(cfg)
@@ -402,11 +404,8 @@ while True:
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
-        if power_target:
-            power_target = "{:4.0f}".format(power_target*ftp_watts)
-        else:
-            power_target = ""
-        window['-TARGET-'].update(power_target)
+        window['-TARGET-'].update(
+            " " if power_target is None else "{:4.0f}".format(power_target*ftp_watts))
         remain_s = workout.block_time_remaining(t.get_time().seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
@@ -416,18 +415,17 @@ while True:
         if heartrate:
             if avg_hr is None:
                 avg_hr = heartrate
-            avg_hr = _avg_val(avg_hr, heartrate, window=3)
+            avg_hr = _avg_val(avg_hr, heartrate, avg_window=3)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, (avg_hr-HEART_RATE_LIMITS[0])/HEART_RATE_LIMITS[1]),
                 (0,0.5), color="cyan")
         if power:
             if avg_power is None:
                 avg_power = power
-            avg_power = _avg_val(avg_power, power, window=5)
+            avg_power = _avg_val(avg_power, power, avg_window=5)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, avg_power / ftp_watts),
                 (min_power, max_power), color="red")
-
 
         # Update power bug
         if power:
