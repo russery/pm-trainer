@@ -92,11 +92,3 @@ class BikeSim():
         Total distance travelled in miles.
         '''
         return self._total_distance_m / 1609
-
-if __name__ == "__main__":
-    # Basic test of hard-coded values
-    sim = BikeSim(weight_kg=80)
-    for i in range(1,100):
-        sim.update(200, i)
-    print('Steady-state speed for 200W: {:4.2f}mph'.format(sim.speed_miph))
-    assert 20.5 <= sim.speed_miph <= 21.7
