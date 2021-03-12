@@ -1,7 +1,6 @@
 import unittest
 import tempfile
-import os
-from ..settings import *
+from ..settings import Settings
 
 
 class TestSettings(unittest.TestCase):
@@ -26,7 +25,7 @@ class TestSettings(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.cfg.active_section = "invalidkey"
         with self.assertRaises(KeyError):
-            asdf = self.cfg.get("invalidkey")
+            _ = self.cfg.get("invalidkey")
 
     def test_add_section(self):
         name = "New Section"

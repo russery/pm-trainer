@@ -1,8 +1,8 @@
 import unittest
-import sys
 import PySimpleGUI as sg
-from ..profile_plotter import *
-from ..workout_profile import *
+import numpy as np
+from ..profile_plotter import plot_blocks, plot_trace
+from ..workout_profile import Workout
 
 class TestProfilePlotter(unittest.TestCase):
     def setUp(self):
@@ -29,7 +29,7 @@ class TestProfilePlotter(unittest.TestCase):
 
         power = -0.2
         for t in np.arange(-0.1, 1.1, 0.003):
-            event, values = self.window.read(timeout=1)
+            event, _ = self.window.read(timeout=1)
             if event == sg.WIN_CLOSED:
                 self.window.close()
                 break

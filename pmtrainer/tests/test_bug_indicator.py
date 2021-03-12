@@ -1,7 +1,6 @@
 import unittest
-import sys
 import PySimpleGUI as sg
-from ..bug_indicator import *
+from ..bug_indicator import BugIndicator
 
 
 class TestBugIndicator(unittest.TestCase):
@@ -26,7 +25,7 @@ class TestBugIndicator(unittest.TestCase):
             bug.update("current_power", signal)
             bug.update("other_indicator", 1.0-signal)
             signal +=0.01
-            event, values = self.window.read(timeout=1)
+            event, _ = self.window.read(timeout=1)
             if event == sg.WIN_CLOSED:
                 self.window.close()
                 break
