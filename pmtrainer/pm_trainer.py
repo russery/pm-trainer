@@ -105,6 +105,12 @@ def _avg_val(running_avg_val, new_val, avg_window=10):
     diff = new_val - running_avg_val
     return running_avg_val + (diff / avg_window)
 
+def _convert_string_time(strtime):
+    '''
+    Convert string time to datetime
+    '''
+    return dt.datetime.strptime(strtime, "%Y-%m-%dT%H:%M:%SZ")
+
 def _exit_app(status=0):
     '''
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
@@ -321,9 +327,8 @@ t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
 if REPLAY_MODE:
     replay_data = Tcx()
     replay_data.open_log(args.replay)
-    replay_data.get_activity()
     p = replay_data.get_next_point()
-    t.start(current_time=p.time)
+    t.start(current_time=_convert_string_time(p.time))
 else:
     t.start()
 
@@ -370,7 +375,8 @@ while True:
             hr_status = sensors.heart_rate_status
             pwr_status = sensors.power_meter_status
         else:
-            while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
+            while (p is not None) and (
+                (_convert_string_time(p.time) - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
                 if heartrate:
                     hr_status = AntSensors.SensorStatus.State.CONNECTED

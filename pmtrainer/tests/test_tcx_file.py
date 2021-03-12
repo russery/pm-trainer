@@ -64,7 +64,11 @@ class TestTcxFile(unittest.TestCase):
                 read_point = self.tcx.get_next_point() # Read points back
                 self.assertIsNotNone(read_point)
                 print(read_point)
-                self._assert_point_equal(p, read_point)
+                if p == test_point_full:
+                    # Check time field for this point since we set it explicitly
+                    self._assert_point_equal(p, read_point, check_time=True)
+                else:
+                    self._assert_point_equal(p, read_point)
 
     def test_open_file(self):
         # Read in a TCX file generated from a Strava activity
@@ -74,6 +78,3 @@ class TestTcxFile(unittest.TestCase):
             print(p)
             self.assertIsNotNone(p.time)
             p = self.tcx.get_next_point()
-
-if __name__ == '__main__':
-    unittest.main()

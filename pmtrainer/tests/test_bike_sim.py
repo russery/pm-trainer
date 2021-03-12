@@ -34,5 +34,14 @@ class TestBikeSim(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._pow_test(10001)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_properties(self):
+        # Test that all property accessors work as expected
+        self.assertEqual(0.0, self.sim.speed_mps)
+        self.assertEqual(0.0, self.sim.speed_miph)
+        self.assertEqual(0.0, self.sim.total_distance_m)
+        self.assertEqual(0.0, self.sim.total_distance_mi)
+        self._pow_test(200)
+        self.assertNotEqual(0.0, self.sim.speed_mps)
+        self.assertNotEqual(0.0, self.sim.speed_miph)
+        self.assertNotEqual(0.0, self.sim.total_distance_m)
+        self.assertNotEqual(0.0, self.sim.total_distance_mi)

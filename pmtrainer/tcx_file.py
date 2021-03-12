@@ -177,7 +177,7 @@ class Tcx():
         except StopIteration:
             self.points = None
             return None
-        point.time = dt.strptime(point_record.find("Time", NAMESPACES).text, "%Y-%m-%dT%H:%M:%SZ")
+        point.time = point_record.find("Time", NAMESPACES).text
         try:
             lat = point_record.find("Position", NAMESPACES).find("LatitudeDegrees", NAMESPACES)
             lon = point_record.find("Position", NAMESPACES).find("LongitudeDegrees", NAMESPACES)
