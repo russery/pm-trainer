@@ -30,6 +30,9 @@ class TestProfilePlotter(unittest.TestCase):
         power = -0.2
         for t in np.arange(-0.1, 1.1, 0.003):
             event, values = self.window.read(timeout=1)
+            if event == sg.WIN_CLOSED:
+                self.window.close()
+                break
             if t < 0.7:
                 power += 0.01
             else:
