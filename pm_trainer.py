@@ -246,7 +246,7 @@ cfg = settings.Settings()
 if os.path.isfile(DEFAULT_SETTINGS["SettingsFile"]):
     cfg.load_settings(filename=DEFAULT_SETTINGS["SettingsFile"])
 else:
-    cfg.load_settings(defaults={"DEFAULT": DEFAULT_SETTINGS})
+    cfg.load_settings(defaults=DEFAULT_SETTINGS)
 
 sg.theme("DarkBlack")
 
