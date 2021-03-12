@@ -3,15 +3,17 @@ Generates workout profiles from a description file.
 '''
 import yaml
 
-ZONES = [0, 0.6, 0.75, 0.9, 1.05, 1.18, 100]
+ZONES = [0, 0.6, 0.75, 0.9, 1.05, 1.18]
 def get_zone(pwr):
     '''
     Returns the power zone number, given a normalized power (0.0-1.0, where 1.0=FTP).
     '''
-    for i in range (0,len(ZONES)-1):
+    if pwr <= ZONES[0]:
+        return 0
+    for i in range(0,len(ZONES)-1):
         if ZONES[i] < pwr <= ZONES[i+1]:
             return i
-    return None
+    return len(ZONES)-1 # Highest zone
 
 class Workout():
     '''
@@ -25,13 +27,9 @@ class Workout():
         def __init__(self, message=""):
             super().__init__(message)
 
-    def __init__(self, workout_file):
-        try:
-            with open(workout_file) as f:
-                self.workout = yaml.full_load(f)
-        except (yaml.scanner.ScannerError, FileNotFoundError) as e:
-            raise Workout.WorkoutError(message="Error reading file \"{}\": {}".format(
-                workout_file, e))
+    def __init__(self, workout_file):    
+        with open(workout_file) as f:
+            self.workout = yaml.full_load(f)
 
         # Check workout duration:
         dur = 0
@@ -44,8 +42,6 @@ class Workout():
 
     def _get_current_block(self, curr_time_s):
         complete_fraction = curr_time_s / self._duration_s
-        if 0.0 > complete_fraction > 1.0:
-            return None, None
         dur = 0
         ind = 0
         block = None
@@ -58,14 +54,14 @@ class Workout():
 
     def block_time_remaining(self, curr_time_s):
         '''
-        Returns the time left in the current workout block
+        Returns the time left in the current workout block in seconds
         '''
         if curr_time_s > self._duration_s:
             return 0
         ind, block = self._get_current_block(curr_time_s)
-        if (ind is None) or (block is None):
-            return 0
         block_duration_s = block["duration"] * self._duration_s
+        if curr_time_s < 0:
+            return block_duration_s
         dur = 0
         for i in range(0,ind):
             dur += self.workout["blocks"][i]["duration"]
@@ -78,8 +74,6 @@ class Workout():
         the current block.
         '''
         _, block = self._get_current_block(curr_time_s)
-        if not block:
-            return None
         start_power = block["start"]
         end_power = block["end"]
         _duration_s = block["duration"] * self._duration_s
@@ -104,7 +98,7 @@ class Workout():
         Returns the minimum and maximum power from a power profile.
         '''
         max_p = 0
-        min_p = 100
+        min_p = float("inf")
         all_blocks = self.get_all_blocks()
         for block in all_blocks:
             _, start, end = block
@@ -132,14 +126,3 @@ class Workout():
         Returns the description of the workout.
         '''
         return self.workout["description"]
-
-
-if __name__ == '__main__':
-    workout = Workout("workouts/sweet_spot.yaml")
-    time_s = 0
-    while time_s < workout.duration_s:
-        block_remaining = workout.block_time_remaining(time_s)
-        power_percent = workout.power_target(time_s)
-        print("{:5}  Remaining: {:5.0f}   Power: {:4.3f}".format(
-            time_s, block_remaining, power_percent))
-        time_s +=1

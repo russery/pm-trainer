@@ -28,15 +28,6 @@
                     <DistanceMeters>150</DistanceMeters>
                     <Trackpoint>
                         <Time>2021-03-11T21:26:53Z</Time>
-                        <HeartRateBpm>
-                            <Value>92</Value>
-                        </HeartRateBpm>
-                        <Cadence>39</Cadence>
-                        <Extensions>
-                            <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
-                                <Watts>92</Watts>
-                            </TPX>
-                        </Extensions>
                     </Trackpoint>
                     <TotalTimeSeconds>104</TotalTimeSeconds>
                     <DistanceMeters>123</DistanceMeters>

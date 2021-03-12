@@ -448,7 +448,7 @@ while True:
                                         power_watts=power,
                                         distance_m=sim.total_distance_m,
                                         speed_mps=sim.speed_mps))
-                logfile.lap_stats(total_time_s=t.get_time().seconds)
+                logfile.set_lap_stats(total_time_s=t.get_time().seconds)
                 logfile.flush()
 
     except AntSensors.SensorError as e:

@@ -220,7 +220,7 @@ class Tcx():
             pass
         return point
 
-    def lap_stats(self, total_time_s=None, distance_m=None):
+    def set_lap_stats(self, total_time_s=None, distance_m=None):
         '''
         Adds total time and distance statistics to the Lap field,
         or updates them if already present.

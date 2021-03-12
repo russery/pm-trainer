@@ -53,6 +53,7 @@ class TestTcxFile(unittest.TestCase):
             self.tcx.add_point(test_point_min) # Point with basic attrs set
             self.tcx.add_point(test_point_none) # Blank point with no attrs set
 
+            self.tcx.set_lap_stats(total_time_s=100, distance_m=100)
             # Write the logfile to disk
             self.tcx.flush()
             print(open(tmp_log.name).read())
@@ -78,3 +79,16 @@ class TestTcxFile(unittest.TestCase):
             print(p)
             self.assertIsNotNone(p.time)
             p = self.tcx.get_next_point()
+
+    def test_open_basic_file(self):
+        # Read in a TCX file without speed or power data
+        self.tcx.open_log(self.fixture_path + "basic_file_structure_test.tcx")
+        p = self.tcx.get_next_point()
+        while p is not None:
+            print(p)
+            self.assertIsNotNone(p.time)
+            p = self.tcx.get_next_point()
+
+    def test_open_invalid_file(self):
+        with self.assertRaises(FileNotFoundError):
+            self.tcx.open_log("asdf")
