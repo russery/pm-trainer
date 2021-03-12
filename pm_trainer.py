@@ -9,14 +9,15 @@ import sys
 import time
 import datetime as dt
 import PySimpleGUI as sg
-import profile_plotter
-import settings
-from ant_sensors import AntSensors
-import assets.icons
-from workout_profile import Workout
-from tcx_file import Tcx, Point
-from bug_indicator import BugIndicator
-from bike_sim import BikeSim
+
+import pmtrainer.profile_plotter as profile_plotter
+import pmtrainer.settings as settings
+from pmtrainer.ant_sensors import AntSensors
+import pmtrainer.assets.icons as icons
+from pmtrainer.workout_profile import Workout
+from pmtrainer.tcx_file import Tcx, Point
+from pmtrainer.bug_indicator import BugIndicator
+from pmtrainer.bike_sim import BikeSim
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -296,7 +297,7 @@ layout = [[sg.T("HH:MM:SS", (8,1), pad=((20,20),(5,0)),
            sg.T("Remaining:", pad=((10,0),(0,0)), font=LABEL_FONT),
                 sg.T("MM:SS",(5,1),
                      key="-REMAINING-",justification="L", font=FONT)]]),
-           sg.Button('', pad=((5,5),(10,0)), image_data=assets.icons.settings,
+           sg.Button('', pad=((5,5),(10,0)), image_data=icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
            [sg.Graph(canvas_size=(30,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
