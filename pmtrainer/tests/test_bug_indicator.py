@@ -1,4 +1,5 @@
 import unittest
+import random
 import PySimpleGUI as sg
 from ..bug_indicator import BugIndicator
 
@@ -21,9 +22,11 @@ class TestBugIndicator(unittest.TestCase):
         bug.add_bug("target_power", color="blue", level_percent=0.5)
         bug.add_bug("current_power", color="red", level_percent=0.5, left=False)
         bug.add_bug("other_indicator", color="cyan")
+        bug.add_bug("rando_indicator", color="black", left=False)
         for _ in range(200):
             bug.update("current_power", signal)
             bug.update("other_indicator", 1.0-signal)
+            bug.update("rando_indicator", random.random())
             signal +=0.01
             event, _ = self.window.read(timeout=1)
             if event == sg.WIN_CLOSED:

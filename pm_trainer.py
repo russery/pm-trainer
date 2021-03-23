@@ -411,8 +411,10 @@ while True:
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
+        if power_target is not None:
+            power_target = power_target * ftp_watts
         window['-TARGET-'].update(
-            " " if power_target is None else "{:4.0f}".format(power_target*ftp_watts))
+            " " if power_target is None else "{:4.0f}".format(power_target))
         remain_s = workout.block_time_remaining(t.get_time().seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
@@ -429,7 +431,7 @@ while True:
         if power:
             if avg_power is None:
                 avg_power = power
-            avg_power = _avg_val(avg_power, power, avg_window=5)
+            avg_power = _avg_val(avg_power, power, avg_window=10)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, avg_power / ftp_watts),
                 (min_power, max_power), color="red")
