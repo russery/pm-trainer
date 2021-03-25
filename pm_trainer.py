@@ -9,14 +9,15 @@ import sys
 import time
 import datetime as dt
 import PySimpleGUI as sg
-import profile_plotter
-import settings
-from ant_sensors import AntSensors
-import assets.icons
-from workout_profile import Workout
-from tcx_file import Tcx, Point
-from bug_indicator import BugIndicator
-from bike_sim import BikeSim
+
+import pmtrainer.profile_plotter as profile_plotter
+import pmtrainer.settings as settings
+from pmtrainer.ant_sensors import AntSensors
+import pmtrainer.assets.icons as icons
+from pmtrainer.workout_profile import Workout
+from pmtrainer.tcx_file import Tcx, Point
+from pmtrainer.bug_indicator import BugIndicator
+from pmtrainer.bike_sim import BikeSim
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -104,6 +105,12 @@ def _avg_val(running_avg_val, new_val, avg_window=10):
     '''
     diff = new_val - running_avg_val
     return running_avg_val + (diff / avg_window)
+
+def _convert_string_time(strtime):
+    '''
+    Convert string time to datetime
+    '''
+    return dt.datetime.strptime(strtime, "%Y-%m-%dT%H:%M:%SZ")
 
 def _exit_app(status=0):
     '''
@@ -239,7 +246,7 @@ cfg = settings.Settings()
 if os.path.isfile(DEFAULT_SETTINGS["SettingsFile"]):
     cfg.load_settings(filename=DEFAULT_SETTINGS["SettingsFile"])
 else:
-    cfg.load_settings(defaults={"DEFAULT": DEFAULT_SETTINGS})
+    cfg.load_settings(defaults=DEFAULT_SETTINGS)
 
 sg.theme("DarkBlack")
 
@@ -290,7 +297,7 @@ layout = [[sg.T("HH:MM:SS", (8,1), pad=((20,20),(5,0)),
            sg.T("Remaining:", pad=((10,0),(0,0)), font=LABEL_FONT),
                 sg.T("MM:SS",(5,1),
                      key="-REMAINING-",justification="L", font=FONT)]]),
-           sg.Button('', pad=((5,5),(10,0)), image_data=assets.icons.settings,
+           sg.Button('', pad=((5,5),(10,0)), image_data=icons.settings,
                 button_color=(sg.theme_background_color(),sg.theme_background_color()),
                 border_width=0, key="-SETTINGS-")],
            [sg.Graph(canvas_size=(30,60), graph_bottom_left=(0,0), graph_top_right=(20,60),
@@ -321,9 +328,8 @@ t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
 if REPLAY_MODE:
     replay_data = Tcx()
     replay_data.open_log(args.replay)
-    replay_data.get_activity()
     p = replay_data.get_next_point()
-    t.start(current_time=p.time)
+    t.start(current_time=_convert_string_time(p.time))
 else:
     t.start()
 
@@ -370,7 +376,8 @@ while True:
             hr_status = sensors.heart_rate_status
             pwr_status = sensors.power_meter_status
         else:
-            while (p is not None) and ((p.time - t.start_time) <= t.get_time()):
+            while (p is not None) and (
+                (_convert_string_time(p.time) - t.start_time) <= t.get_time()):
                 heartrate = p.heartrate_bpm
                 if heartrate:
                     hr_status = AntSensors.SensorStatus.State.CONNECTED
@@ -404,8 +411,10 @@ while True:
 
         # Update workout params:
         power_target = workout.power_target(t.get_time().seconds)
+        if power_target is not None:
+            power_target = power_target * ftp_watts
         window['-TARGET-'].update(
-            " " if power_target is None else "{:4.0f}".format(power_target*ftp_watts))
+            " " if power_target is None else "{:4.0f}".format(power_target))
         remain_s = workout.block_time_remaining(t.get_time().seconds)
         window['-REMAINING-'].update("{:2.0f}:{:02.0f}".format(
             int(remain_s / 60) % 60, remain_s % 60))
@@ -422,7 +431,7 @@ while True:
         if power:
             if avg_power is None:
                 avg_power = power
-            avg_power = _avg_val(avg_power, power, avg_window=5)
+            avg_power = _avg_val(avg_power, power, avg_window=10)
             _plot_trace(window["-PROFILE-"],
                 (norm_time, avg_power / ftp_watts),
                 (min_power, max_power), color="red")
@@ -442,7 +451,7 @@ while True:
                                         power_watts=power,
                                         distance_m=sim.total_distance_m,
                                         speed_mps=sim.speed_mps))
-                logfile.lap_stats(total_time_s=t.get_time().seconds)
+                logfile.set_lap_stats(total_time_s=t.get_time().seconds)
                 logfile.flush()
 
     except AntSensors.SensorError as e:

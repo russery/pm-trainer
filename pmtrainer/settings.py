@@ -9,6 +9,8 @@ class Settings():
     '''
     def __init__(self):
         self.config = cp.ConfigParser()
+        self._active_section = "DEFAULT"
+        self.config[self._active_section] = {}
 
     def load_settings(self, filename=None, defaults=None):
         '''
@@ -18,7 +20,7 @@ class Settings():
             self.config.read(filename)
             # TODO: Validate file format
         elif defaults:
-            self.config.read_dict(defaults)
+            self.config.read_dict({"DEFAULT":defaults})
 
 
     def write_settings(self, filename):
@@ -32,10 +34,27 @@ class Settings():
         '''
         Return a setting based on its name
         '''
-        return self.config["DEFAULT"][key]
+        return self.config[self.active_section][key]
 
     def set(self, key, value):
         '''
         Set a setting based on its name
         '''
-        self.config["DEFAULT"][key] = value
+        self.config[self.active_section][key] = value
+
+    def create_section(self, section, settings={}):
+        '''
+        Create a new section, optionally populating settings
+        '''
+        self.config[section] = settings
+    
+    @property
+    def active_section(self):
+        return self._active_section
+
+    @active_section.setter
+    def active_section(self, active_section):
+        if active_section in self.config.sections():
+            self._active_section = active_section
+        else:
+            raise KeyError("Section name {} not found in settings config".format(active_section))
