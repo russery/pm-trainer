@@ -1,0 +1,7 @@
+name: Test Workout
+description: This is a test workout
+duration_s: 1800
+blocks: 
+  - duration: 0.1 
+    start: 0.5
+    end: 0.85

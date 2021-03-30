@@ -70,28 +70,3 @@ class BugIndicator():
         Update the bug's position, accessing the bug by name.
         '''
         self.bugs[name].move(self.graph, value)
-
-if __name__ == "__main__":
-    import sys
-    layout = [[sg.Graph(
-            canvas_size=(50, 100),
-            graph_bottom_left=(0, 0),
-            graph_top_right=(50, 100),
-            background_color='gray',
-            enable_events=True,
-            key="-POWER-")]]
-    window = sg.Window('Workout Profile', layout, finalize=True, keep_on_top=True)
-
-    signal = -0.1
-    bug = BugIndicator(window["-POWER-"])
-    bug.add_bug("target_power", color="blue", level_percent=0.5)
-    bug.add_bug("current_power", color="red", level_percent=0.5, left=False)
-    bug.add_bug("other_indicator", color="cyan")
-    while True:
-        bug.update("current_power", signal)
-        bug.update("other_indicator", 1.0-signal)
-        signal +=0.01
-        event, values = window.read(timeout=100)
-        if event == sg.WIN_CLOSED:
-            window.close()
-            sys.exit()

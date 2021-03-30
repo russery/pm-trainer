@@ -26,6 +26,9 @@ class BikeSim():
         loss = drivetrain losses
         '''
 
+        if power_watts > 10000:
+            raise ValueError("Out of range power {} > 10000".format(power_watts))
+
         # Calculate longitudinal component of gravity
         Fg_N = 0 # assumes we're on a flat course
 
@@ -60,6 +63,8 @@ class BikeSim():
         # Calculate new speed
         A_mps2 = (Fp_N - (Fg_N + Fr_N + Fa_N)) / self._weight_kg
         self._speed_mps = self._speed_mps + A_mps2 * DeltaT_s
+        if self._speed_mps < 0.0:
+            self._speed_mps = 0.0  # Don't allow negative speed
 
         # Update time and calculate distance travelled from avg. speed
         self._total_distance_m += self._speed_mps * DeltaT_s
@@ -93,10 +98,17 @@ class BikeSim():
         '''
         return self._total_distance_m / 1609
 
-if __name__ == "__main__":
-    # Basic test of hard-coded values
-    sim = BikeSim(weight_kg=80)
-    for i in range(1,100):
-        sim.update(200, i)
-    print('Steady-state speed for 200W: {:4.2f}mph'.format(sim.speed_miph))
-    assert 20.5 <= sim.speed_miph <= 21.7
+    @property
+    def weight_kg(self):
+        '''
+        Returns the bike+rider weight used for the sim.
+        '''
+        return self._weight_kg
+    
+    @weight_kg.setter
+    def weight_kg(self, weight_kg):
+        '''
+        Sets the combined bike+rider weight.
+        '''
+        self._weight_kg = weight_kg
+
