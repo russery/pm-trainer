@@ -97,3 +97,18 @@ class BikeSim():
         Total distance travelled in miles.
         '''
         return self._total_distance_m / 1609
+
+    @property
+    def weight_kg(self):
+        '''
+        Returns the bike+rider weight used for the sim.
+        '''
+        return self._weight_kg
+    
+    @weight_kg.setter
+    def weight_kg(self, weight_kg):
+        '''
+        Sets the combined bike+rider weight.
+        '''
+        self._weight_kg = weight_kg
+

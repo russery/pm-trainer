@@ -47,13 +47,19 @@ class Settings():
         Create a new section, optionally populating settings
         '''
         self.config[section] = settings
-    
+
     @property
     def active_section(self):
+        '''
+        Return the currently active section of the config.
+        '''
         return self._active_section
 
     @active_section.setter
     def active_section(self, active_section):
+        '''
+        Set the active section of the config.
+        '''
         if active_section in self.config.sections():
             self._active_section = active_section
         else:
