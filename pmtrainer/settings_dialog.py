@@ -105,22 +105,29 @@ def settings_dialog_popup(config):
     A dialog box to change persistent settings saved in the config file.
     '''
     FTP_RANGE = range(1,1000)
+    WEIGHT_RANGE = range(5,250)
     log_directory = os.path.abspath(config.get("LogDirectory"))
     settings_layout = [
         [sg.Frame("User",
-            [[sg.T("FTP:"),
+            [[sg.T("FTP watts:", (12,1)),
               sg.Spin(values=list(FTP_RANGE), key="-FTP-",
-                initial_value=config.get("FTPWatts"), size=(4,1)) ],
-            [sg.T("Sensors:")]], vertical_alignment="t"),
+                initial_value=config.get("FTPWatts"), size=(5,1)) ],
+              [sg.T("Rider kilograms:", (12,1)),
+              sg.Spin(values=list(WEIGHT_RANGE), key="-RIDER-KG-",
+                initial_value=config.get("RiderWeightKg"), size=(5,1)) ],
+              [sg.T("Bike kilograms:", (12,1)),
+              sg.Spin(values=list(WEIGHT_RANGE), key="-BIKE-KG-",
+                initial_value=config.get("BikeWeightKg"), size=(5,1)) ]],
+              vertical_alignment="t"),
         sg.Frame("Workout",
             [[sg.T("name", (30,1), key="-WKT-NAME-"), sg.B("Select", key="-WKT-SEL-BTTN-")],
              [sg.T("duration", (30,1), key="-WKT-DUR-")],
              [sg.T("description", (40,2), key="-WKT-DESC-")]],
-            vertical_alignment="t")],
+             vertical_alignment="t")],
         [sg.Frame("System",
             [[sg.T("Log Path:"), sg.Input(log_directory, k="-LOGDIRECTORY-"),
               sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
-                target="-LOGDIRECTORY-")]])],
+                              target="-LOGDIRECTORY-")]])],
         [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
     ]
     window = sg.Window("Settings", settings_layout,
@@ -146,9 +153,10 @@ def settings_dialog_popup(config):
                 sg.Popup("\n".join(errors), title="Bad Settings")
             else:
                 config.set("FTPWatts", str(v["-FTP-"]))
+                config.set("RiderWeightKg", str(v["-RIDER-KG-"]))
+                config.set("BikeWeightKg", str(v["-BIKE-KG-"]))
                 config.set("LogDirectory", v["-LOGDIRECTORY-"])
                 window.close()
-                config.write_settings(config.get("SettingsFile"))
                 return
         if e == "-WKT-SEL-BTTN-":
             new_workout_path = workout_selection_popup(config.get("Workout"))

@@ -161,6 +161,7 @@ def _plot_workout(graph, wkout, y_lims):
     Plot a workout on the graph.
     '''
     y_lims = _scale_plot_margins(y_lims)
+    graph.erase()
     profile_plotter.plot_blocks(graph, wkout.get_all_blocks(), y_lims)
 
 def _plot_trace(graph, val, y_lims, size=3, color='red'):
@@ -257,7 +258,8 @@ if REPLAY_MODE:
 else:
     t.start()
 
-sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))))
+total_weight_kg = (float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg")))
+sim = BikeSim(weight_kg=total_weight_kg)
 
 iters = 0
 avg_hr = None
@@ -272,14 +274,14 @@ while True:
         if event == sg.WIN_CLOSED:
             _exit_app()
         if event == "-SETTINGS-":
-            #window.Disappear()
             settings_dialog_popup(cfg)
-            #window.Reappear()
-            # Update workout plot:
+            cfg.write_settings(cfg.get("SettingsFile"))
+            # Update workout plot and start new workout if changed:
             w_new, min_new, max_new = _get_workout_from_config(cfg)
             if w_new.name != workout.name:
                 workout, min_power, max_power = w_new, min_new, max_new
                 _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
+                #TODO: popup asking if we want to restart the workout or continue from the current time
             # Update log directory and start new log if it's changed:
             dir_new = cfg.get("LogDirectory")
             if dir_new != log_dir:
@@ -287,6 +289,10 @@ while True:
                 logfile = _start_log(log_dir)
             # Update other values:
             ftp_watts = float(cfg.get("FTPWatts"))
+            new_total_weight_kg = float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeightKg"))
+            if total_weight_kg != new_total_weight_kg:
+                total_weight_kg = new_total_weight_kg
+                sim.weight_kg = new_total_weight_kg
 
         # Update current time:
         t.update()
