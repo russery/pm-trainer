@@ -263,6 +263,7 @@ iters = 0
 avg_hr = None
 avg_power = None
 ftp_watts = float(cfg.get("FTPWatts"))
+last_log_time = t.get_time()
 
 while True:
     try:
@@ -365,8 +366,7 @@ while True:
 
         # Update log file
         iters += 1
-        if iters % int(cfg.get("UpdateRateHz")) == 0: #HACKY HACK HACK
-            #TODO: Limit logging to 1Hz more intelligently
+        if t.get_time().seconds - last_log_time.seconds >= 1.0:  # Log at 1Hz.
             if pwr_status == AntSensors.SensorStatus.State.CONNECTED:
                 logfile.add_point(Point(heartrate_bpm=heartrate,
                                         cadence_rpm=cadence,
