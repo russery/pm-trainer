@@ -19,7 +19,7 @@ def _validate_int_range(val, val_name, val_range, error_list):
             val_name, val, val_range[0], val_range[-1]))
 
 
-def SettingsDialogPopup(config):
+def settings_dialog_popup(config):
     '''
     A dialog box to change persistent settings saved in the config file.
     '''

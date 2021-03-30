@@ -18,7 +18,7 @@ from pmtrainer.workout_profile import Workout
 from pmtrainer.tcx_file import Tcx, Point
 from pmtrainer.bug_indicator import BugIndicator
 from pmtrainer.bike_sim import BikeSim
-from pmtrainer.settings_dialog import SettingsDialogPopup
+from pmtrainer.settings_dialog import settings_dialog_popup
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -276,7 +276,7 @@ while True:
             _exit_app()
         if event == "-SETTINGS-":
             #window.Disappear()
-            SettingsDialogPopup(cfg)
+            settings_dialog_popup(cfg)
             #window.Reappear()
             # Update workout plot:
             w_new, min_new, max_new = _get_workout_from_config(cfg)
