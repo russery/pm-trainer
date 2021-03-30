@@ -30,12 +30,12 @@ DEFAULT_SETTINGS = {
    # Window / system settings
    "LogDirectory": "./logs",
    "SettingsFile": "pm_trainer_settings.ini",
-   "UpdateRateHz": 10
 }
 
 PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits
 HEART_RATE_LIMITS = (100, 200)
 POWER_BUG_LIMITS_WATTS = 100 # Vertical size of power bug in watts
+UPDATE_RATE_MS = 100
 
 parser = argparse.ArgumentParser(description='Command line options')
 parser.add_argument("-r", "--replay", default=None,
@@ -247,13 +247,8 @@ _plot_workout(window["-PROFILE-"], workout, (min_power, max_power))
 log_dir = cfg.get("LogDirectory")
 logfile = _start_log(log_dir)
 
-update_ms = 1000 / float(cfg.get("UpdateRateHz"))
-if REPLAY_MODE:
-    update_ms = 50
-ftp_watts = float(cfg.get("FTPWatts"))
-
 # Main loop
-t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * update_ms)
+t = Timer(replay=REPLAY_MODE, tick_ms=args.speed * UPDATE_RATE_MS)
 if REPLAY_MODE:
     replay_data = Tcx()
     replay_data.open_log(args.replay)
@@ -267,11 +262,12 @@ sim = BikeSim(weight_kg=(float(cfg.get("RiderWeightKg"))+float(cfg.get("BikeWeig
 iters = 0
 avg_hr = None
 avg_power = None
+ftp_watts = float(cfg.get("FTPWatts"))
 
 while True:
     try:
         # Handle window events
-        event, _ = window.read(timeout=update_ms)
+        event, _ = window.read(timeout=UPDATE_RATE_MS)
         if event == sg.WIN_CLOSED:
             _exit_app()
         if event == "-SETTINGS-":
@@ -289,9 +285,6 @@ while True:
                 log_dir = dir_new
                 logfile = _start_log(log_dir)
             # Update other values:
-            update_ms = 1000 / float(cfg.get("UpdateRateHz"))
-            if REPLAY_MODE:
-                update_ms = 50
             ftp_watts = float(cfg.get("FTPWatts"))
 
         # Update current time:

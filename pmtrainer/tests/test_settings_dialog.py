@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from ..settings import Settings
-from ..settings_dialog import settings_dialog_popup
+from ..settings_dialog import *
 
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
@@ -15,3 +15,6 @@ class TestSettingsDialog(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as tmp:
             self.config.write_settings(tmp.name)
             print(open(tmp.name, "r").read())
+
+#    def test_workout_popup(self):
+#        workout_selection_popup()

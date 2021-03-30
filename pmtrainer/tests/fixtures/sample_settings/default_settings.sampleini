@@ -5,4 +5,3 @@ bikeweightkg = 66
 workout = workouts/sweet_spot_short.yaml
 logdirectory = /tmp/
 settingsfile = pm_trainer_settings.ini
-updateratehz = 10
