@@ -79,8 +79,8 @@ class Tcx():
         self.tcx = None
         self.file_name = None
         self.activity = None
-        self.activities = None
         self.current_lap = None
+        self.current_track = None
         self.points = None
 
     def open_log(self, fname):
@@ -88,7 +88,6 @@ class Tcx():
         Opens an existing log file for reading or writing
         '''
         self.tcx = et.parse(fname).getroot()
-        self.activities = self.tcx.find("Activities", NAMESPACES)
         self.file_name = fname
 
     def start_log(self, fname):
@@ -101,12 +100,17 @@ class Tcx():
         self.tcx.set("xsi:schemaLocation",
                      NAMESPACES[""] +
                      " http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd")
-        self.activities = et.SubElement(self.tcx, "Activities")
+        self.activity = et.SubElement(et.SubElement(self.tcx, "Activities"), "Activity")
         self.file_name = fname
-        self.activity = None
+        self.current_track = None
         self.current_lap = None
+        self.points = None
 
-    def get_activity(self, activity_index=0):
+    @property
+    def activities(self):
+        return self.tcx.find("Activities", NAMESPACES)
+    
+    def set_current_activity(self, activity_index=0):
         '''
         Sets the current activity to the one specified by activity_index
         '''
@@ -119,20 +123,19 @@ class Tcx():
         TODO: handle multiple tracks and laps?
         '''
         assert isinstance(activity_type, Tcx.ActivityType)
-        self.activity = et.SubElement(self.activities, "Activity")
         self.activity.set("Sport", activity_type.name)
         et.SubElement(self.activity, "Id").text = _time_stamp()
-        self.current_lap = et.SubElement(et.SubElement(self.activity, "Lap"), "Track")
-
+        self.current_lap = et.SubElement(self.activity, "Lap")
+        self.current_track = et.SubElement(self.current_lap, "Track")
 
     def add_point(self, point):
         '''
         Adds an activity point, including position, speed, altitude, heartrate,
         power, etc. (all optional).
         '''
-        if not point.time:
-            point.time = _time_stamp()
-        point_record = et.SubElement(self.current_lap, "Trackpoint")
+        if point.time is None:
+            point.time = _time_stamp() # Use current time if not provided
+        point_record = et.SubElement(self.current_track, "Trackpoint")
         et.SubElement(point_record, "Time").text = point.time
         if (point.lat_deg is not None) and (point.lon_deg is not None):
             position = et.SubElement(point_record, "Position")
@@ -164,6 +167,9 @@ class Tcx():
         point = Point()
         if not self.points:
             # If not already set, grab the first point from the activity
+            if not self.activity:
+                self.set_current_activity()
+            assert self.activity is not None
             self.points = self.activity.find("Lap", NAMESPACES).find(
                 "Track", NAMESPACES).iterfind("Trackpoint", NAMESPACES)
         try:
@@ -171,7 +177,7 @@ class Tcx():
         except StopIteration:
             self.points = None
             return None
-        point.time = dt.strptime(point_record.find("Time", NAMESPACES).text, "%Y-%m-%dT%H:%M:%SZ")
+        point.time = point_record.find("Time", NAMESPACES).text
         try:
             lat = point_record.find("Position", NAMESPACES).find("LatitudeDegrees", NAMESPACES)
             lon = point_record.find("Position", NAMESPACES).find("LongitudeDegrees", NAMESPACES)
@@ -214,7 +220,7 @@ class Tcx():
             pass
         return point
 
-    def lap_stats(self, total_time_s=None, distance_m=None):
+    def set_lap_stats(self, total_time_s=None, distance_m=None):
         '''
         Adds total time and distance statistics to the Lap field,
         or updates them if already present.
@@ -238,37 +244,3 @@ class Tcx():
         out = minidom.parseString(out).toprettyxml(indent="    ")
         with open(self.file_name, "w") as f:
             f.write(out)
-
-
-if __name__ == "__main__":
-    file = Tcx()
-    file.start_log("asdf.tcx")
-    file.start_activity(activity_type=Tcx.ActivityType.OTHER)
-    file.add_point(Point(
-        lat_deg=51.5014600,
-        lon_deg=-0.1402330,
-        altitude_m=12.2,
-        distance_m=2.0,
-        heartrate_bpm=92,
-        cadence_rpm=39,
-        speed_mps=0.0,
-        power_watts=92))
-    file.lap_stats(total_time_s=10, distance_m=150)
-    file.flush()
-    file.add_point(Point(
-        heartrate_bpm=92,
-        cadence_rpm=39,
-        power_watts=92))
-    file.lap_stats(total_time_s=104, distance_m=123)
-    file.flush()
-
-    # FILE = "sample_files/20201205_091538.tcx"
-    # FILE = "sample_files/Jon_s_Mix.tcx"
-    FILE = "sample_files/Tried_out_the_workout_course_.tcx"
-    file = Tcx()
-    file.open_log(FILE)
-    file.get_activity()
-    p = file.get_next_point()
-    while p:
-        print(p)
-        p = file.get_next_point()
