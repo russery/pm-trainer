@@ -18,7 +18,7 @@ from pmtrainer.workout_profile import Workout
 from pmtrainer.tcx_file import Tcx, Point
 from pmtrainer.bug_indicator import BugIndicator
 from pmtrainer.bike_sim import BikeSim
-from settings_dialog import SettingsDialogPopup
+from pmtrainer.settings_dialog import SettingsDialogPopup
 
 DEFAULT_SETTINGS = {
    # User / session settings:
