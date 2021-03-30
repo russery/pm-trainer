@@ -1,7 +1,9 @@
+"""
+Provides GUI windows for changing settings from configuration file.
+"""
+
 import os
-import time
 import PySimpleGUI as sg
-import pmtrainer.settings as settings
 from pmtrainer.profile_plotter import plot_blocks
 from pmtrainer.workout_profile import Workout
 
@@ -36,7 +38,7 @@ def workout_selection_popup(workout_path):
     Find all the workouts in the passed-in directory, plot them,
     and allow the user to select one.
     '''
-    
+
     # Find all the valid workout files:
     workout_dir = os.path.dirname(workout_path)
     all_files = os.listdir(workout_dir)
@@ -45,19 +47,21 @@ def workout_selection_popup(workout_path):
         if f.endswith(".yaml"):
             wpath = workout_dir + "/" + f
             w = Workout(wpath)
-            workouts[w.name] = {"workout": w, "path": wpath} 
+            workouts[w.name] = {"workout": w, "path": wpath}
 
     # Create a window with frames for each workout file:
     layout = []
     for w in workouts.values():
         workout = w["workout"]
-        frame = sg.Frame(title=workout.name, key=workout.name, 
+        frame = sg.Frame(title=workout.name, key=workout.name,
             layout=[[
-                    sg.Column([[sg.Graph(canvas_size=(8,60), # Graph background color will indicate selected workout
+                    # Graph background color will indicate selected workout:
+                    sg.Column([[sg.Graph(canvas_size=(8,60),
                                          graph_bottom_left=(0,0), graph_top_right=(8,60),
                                          key=workout.name+"-sel")]]),
                     sg.Column([
-                        [sg.T("{} - {:3.0f}min".format(workout.description, workout.duration_s/60))],
+                        [sg.T("{} - {:3.0f}min".format(workout.description,
+                                                       workout.duration_s/60))],
                         [sg.Graph(key=workout.name+"-graph",
                            canvas_size=(300,30),
                            graph_bottom_left=(0,0),
@@ -68,14 +72,14 @@ def workout_selection_popup(workout_path):
     layout.extend([[sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]])
     window = sg.Window("Select a Workout", layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
-    
+
     # Plot the workouts in each frame and highlight the active workout:
     for w in workouts.values():
         workout = w["workout"]
         _, max_power = workout.get_min_max_power()
         blocks = workout.get_all_blocks()
         plot_blocks(window[workout.name+"-graph"], blocks, (0.0, max_power))
-    
+
     _highlight_active_workout(window, workouts, workout_path)
 
     new_workout_path = workout_path
@@ -83,7 +87,7 @@ def workout_selection_popup(workout_path):
         e, _ = window.read()
         if e in (sg.WIN_CLOSED, "-CANCEL-"):
             window.close()
-            return workout_path 
+            return workout_path
         elif e == "-SAVE-":
             window.close()
             return new_workout_path

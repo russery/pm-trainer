@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 from ..settings import Settings
-from ..settings_dialog import *
+from ..settings_dialog import settings_dialog_popup, workout_selection_popup
 
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
