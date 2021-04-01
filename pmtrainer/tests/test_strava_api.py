@@ -19,7 +19,7 @@ class TestStravaApi(unittest.TestCase):
             else:
                 print("Using cached auth token")
         except StravaApi.AuthError as e:
-            if e.exception.err_type == StravaApi.AuthError.ErrorType.CLIENT:
+            if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
                 print("Couldn't authenticate with given client secrets. " \
                       "Check that they are correct.")
             raise e
@@ -88,3 +88,14 @@ class TestStravaApi(unittest.TestCase):
         new_expiry = int(self.secrets.get("access_token_expire_time"))
         self.assertTrue(new_expiry >= old_expiry)
         self.assertTrue(new_expiry >= expected_expiry)
+
+    def test_auth_timeout(self):
+        StravaApi.AUTH_URL = "fake url"
+        with self.assertRaises(StravaApi.AuthError) as e:
+            self.api.get_tokens()
+        self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.TIMEOUT)
+
+    def test_auth_scope(self):
+        with self.assertRaises(StravaApi.AuthError) as e:
+            self.api.get_tokens()
+        self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.SCOPE)

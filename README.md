@@ -11,39 +11,11 @@
 	- Get the `Client ID` and the `Client Secret` from the page after you've registered your API.
 
 
-### Get access token, refresh token:
-Response for expired code:
-{
-  "message": "Bad Request",
-  "errors": [
-    {
-      "resource": "AuthorizationCode",
-      "field": "",
-      "code": "expired"
-    }
-  ]
-}
-
-Good response:
-{
-  "token_type": "Bearer",
-  "expires_at": 1617168773,
-  "expires_in": 21219,
-  "refresh_token": "",
-  "access_token": "",
-  "athlete": {
-...
-  }
-}
-
 
 TODO:
-- handle timeout on receiving auth code (no internet, etc.)
-- handle settings file without client secrets (prompt user to enter secrets)
-- Add settings button to do initial auth
-- handle refresh of tokens
-- unit tests!!
+- GUI: handle settings file without client secrets (prompt user to enter secrets)
+- GUI: Add settings button to do initial auth
 - Display a nice page after oauth redirect
-- Handle user not giving proper permissions on auth page
+
 
 

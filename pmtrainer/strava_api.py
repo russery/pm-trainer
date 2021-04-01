@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
-import re
 from threading import Thread
 import time
 import subprocess
@@ -21,6 +20,8 @@ class StravaApi():
     AUTH_URL = "http://www.strava.com/oauth/authorize"
     TOKEN_URL = "https://www.strava.com/oauth/token"
     ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
+
+    AUTH_SCOPE = "activity:write"
 
     SERVER_HOSTNAME = "localhost"
     SERVER_PORT = 8080
@@ -38,6 +39,7 @@ class StravaApi():
             HTTP_RESP = 2
             TIMEOUT = 3
             CLIENT = 4
+            SCOPE = 5
 
         def __init__(self, expression=None, message="", err_type=ErrorType.UNKNOWN):
             super().__init__(message)
@@ -52,18 +54,28 @@ class StravaApi():
         and displays a nice page for the user.
         '''
         auth_code = None
+        auth_scopes = []
         def do_GET(self):
             '''
             Handles page request from Strava Oauth2 redirect.
             '''
-            p = re.compile(r"code=(.+)&")
-            code = p.findall(self.path)
+            resp = self.path.lstrip("/?").split("&")
+            code = None
+            scopes = None
+            for r in resp:
+                if "code=" in r:
+                    code = r.replace("code=", "")
+                if "scope=" in r:
+                    scopes = r.replace("scope=", "").split(",")
             if code:
-                StravaApi.AuthCodeHandler.auth_code = code[0]
+                StravaApi.AuthCodeHandler.auth_code = code
+            if scopes:
+                StravaApi.AuthCodeHandler.auth_scopes = scopes
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(bytes("<html><head><title>Strava Authentication Successful!</title></head>", "utf-8"))
+            self.wfile.write(bytes("<p>response: {}</p>".format(self.path), "utf-8"))
             self.wfile.write(bytes("<p>authcode: {}</p></html>".format(StravaApi.AuthCodeHandler.auth_code), "utf-8"))
 
     def __init__(self, secrets_store):
@@ -101,7 +113,8 @@ class StravaApi():
         if ((response.status_code != 200) or
             ("Authorization Error" in response_data.values())):
             raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.HTTP_RESP,
-                message="Auth request got response:\r\n\n{}\r\n\n{}".format(response.headers, response_data))
+                message="Auth request got response:\r\n\n{}\r\n\n{}".format(
+                    response.headers, response_data))
         return response
 
     def is_authed(self):
@@ -153,7 +166,7 @@ class StravaApi():
         authorization_redirect_url = StravaApi.AUTH_URL + "?response_type=code" + \
                             "&client_id=" + self.secrets_store.get("client_id") + \
                             "&redirect_uri=" + StravaApi.SERVER_CALLBACK_URI + \
-                            "&scope=activity:write&approval_prompt=auto"
+                            "&scope="+ StravaApi.AUTH_SCOPE + "&approval_prompt=auto"
         # Open web browser with authorization URL
         #webbrowser.open(authorization_redirect_url)
         # Using "webbrowser" causes XQuartz to launch, so do it a hacky way instead:
@@ -168,9 +181,19 @@ class StravaApi():
             except OSError:
                 print("Please open this link in a browser: " + authorization_redirect_url)
         # Wait for Strava API to reply with auth code
+        auth_timeout_seconds_remaining = 30
         while not StravaApi.AuthCodeHandler.auth_code:
-            #TODO: Timeout here? What happens if there is no internet?
-            time.sleep(0.5)
+            time.sleep(1.0)
+            auth_timeout_seconds_remaining -= 1
+            if auth_timeout_seconds_remaining <= 0:
+                raise StravaApi.AuthError("Timed out waiting for auth code",
+                                          err_type=StravaApi.AuthError.ErrorType.TIMEOUT)
+        if StravaApi.AUTH_SCOPE not in StravaApi.AuthCodeHandler.auth_scopes:
+            raise StravaApi.AuthError("Authorization scope error. Expected {} got {}".format(
+                                        StravaApi.AUTH_SCOPE,
+                                        StravaApi.AuthCodeHandler.auth_scopes),
+                                        err_type=StravaApi.AuthError.ErrorType.SCOPE)
+
         self.secrets_store.set("authorization_code", StravaApi.AuthCodeHandler.auth_code)
         self.httpd.server_close()
         self.httpd.shutdown()
@@ -199,8 +222,8 @@ class StravaApi():
         if ((response.status_code != 200) or
             ("Authorization Error" in response_data.values())):
             raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.HTTP_RESP,
-                message="Auth request got response:\r\n\n{}\r\n\n{}".format(response.headers, response_data))
-        
+                message="Auth request got response:\r\n\n{}\r\n\n{}".format(
+                                                    response.headers, response_data))
         self.secrets_store.set("access_token", response_data["access_token"])
         self.secrets_store.set("refresh_token", response_data["refresh_token"])
         self.secrets_store.set("access_token_expire_time", str(response_data["expires_at"]))
