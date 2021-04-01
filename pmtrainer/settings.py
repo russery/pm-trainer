@@ -42,6 +42,12 @@ class Settings():
         '''
         self.config[self.active_section][key] = value
 
+    def delete(self, key):
+        '''
+        Remove a key from the config.
+        '''
+        self.config.remove_option(self.active_section, key)
+
     def create_section(self, section, settings={}):
         '''
         Create a new section, optionally populating settings

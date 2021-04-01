@@ -33,3 +33,11 @@ class TestSettings(unittest.TestCase):
         self.cfg.active_section = "New Section"
         self.assertEqual(self.cfg.active_section, name)
         self.assertEqual(self.cfg.get("setting"), "value")
+
+    def test_delete_key(self):
+        self.cfg.set("new_setting", "new_value")
+        val = self.cfg.get("new_setting")
+        self.assertEqual(val, "new_value")
+        self.cfg.delete("new_setting")
+        with self.assertRaises(KeyError):
+            self.cfg.get("new_setting")
