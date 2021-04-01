@@ -11,7 +11,7 @@ import time
 import subprocess
 import sys
 import requests
-
+from pmtrainer.assets import strava_auth_confirm_page as auth_page
 
 class StravaApi():
     """
@@ -74,9 +74,7 @@ class StravaApi():
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(bytes("<html><head><title>Strava Authentication Successful!</title></head>", "utf-8"))
-            self.wfile.write(bytes("<p>response: {}</p>".format(self.path), "utf-8"))
-            self.wfile.write(bytes("<p>authcode: {}</p></html>".format(StravaApi.AuthCodeHandler.auth_code), "utf-8"))
+            self.wfile.write(bytes(auth_page.strava_auth_confirm_page, "utf-8"))
 
     def __init__(self, secrets_store):
         self.secrets_store = secrets_store
