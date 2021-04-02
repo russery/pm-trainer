@@ -14,7 +14,8 @@
 
 TODO:
 - Flesh out README with details of initial setup (client secrets, etc)
-- 
+- Refactor pm_trainer as a class, to make data sharing between functions less clunky. Maybe refactor into multiple classes, too?
+- Rename / Refactor AuthError and error codes to cover both authorization and other API errors
 
 
 

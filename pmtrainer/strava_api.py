@@ -126,26 +126,36 @@ class StravaApi():
                 raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.CLIENT,
                     message="Could not find {}".format(str(e)))
 
-    def api_request(self, url):
+    def api_request(self, url, method="get", post_data=None, auth=True):
         '''
         Issues an API request, and checks returned headers and response.
         Returns API response.
         '''
-        try:
-            token = self.secrets_store.get("access_token")
-        except KeyError as e:
-            raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.CLIENT,
-                    message="Could not find {}".format(str(e)))
+        assert method in ["get", "post"]
 
-        headers = {'Authorization': 'Bearer ' + token}
-        response = requests.get(url, headers=headers, verify=True)
+        if auth:
+            try:
+                token = self.secrets_store.get("access_token")
+            except KeyError as e:
+                raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.CLIENT,
+                        message="Could not find {}".format(str(e)))
+            headers = {"Authorization": "Bearer " + token}
+        else:
+            headers = None
+
+        if method == "get":
+            response = requests.get(url, headers=headers, verify=True)
+        elif method == "post":
+            print(post_data)
+            response = requests.post(url, data=post_data, headers=headers, verify=True)
+
         response_data = json.loads(response.text)
         if ((response.status_code != 200) or
-            ("Authorization Error" in response_data.values())):
+            ("API Error" in response_data.values())):
             raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.HTTP_RESP,
-                message="Auth request got response:\r\n\n{}\r\n\n{}".format(
+                message="API request got response:\r\n\n{}\r\n\n{}".format(
                     response.headers, response_data))
-        return response
+        return response_data
 
     def is_authed(self):
         '''
@@ -265,17 +275,11 @@ class StravaApi():
             "client_secret": self.secrets_store.get("client_secret")})
 
     def _send_token_request(self, post_data):
-        response = requests.post(StravaApi.TOKEN_URL, data=post_data,
-                                verify=True, allow_redirects=False)
-        response_data = json.loads(response.text)
-        if ((response.status_code != 200) or
-            ("Authorization Error" in response_data.values())):
-            raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.HTTP_RESP,
-                message="Auth request got response:\r\n\n{}\r\n\n{}".format(
-                                                    response.headers, response_data))
-        self.secrets_store.set("access_token", response_data["access_token"])
-        self.secrets_store.set("refresh_token", response_data["refresh_token"])
-        self.secrets_store.set("access_token_expire_time", str(response_data["expires_at"]))
+        response = self.api_request(StravaApi.TOKEN_URL, method="post",
+                                post_data=post_data, auth=False)
+        self.secrets_store.set("access_token", response["access_token"])
+        self.secrets_store.set("refresh_token", response["refresh_token"])
+        self.secrets_store.set("access_token_expire_time", str(response["expires_at"]))
 
         assert self.is_authed()
 
@@ -284,16 +288,40 @@ class StravaData():
     Interacts with the Strava API to perform various tasks.
     """
     ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
-
+    ACTIVITY_UPLOAD_URL = "https://www.strava.com/api/v3/uploads"
 
     def __init__(self, api):
         self.api = api
 
-    def _api_request_json(self, url):
-        return json.loads(self.api.api_request(url).text)
-
     def get_athlete_name(self):
-        resp = self._api_request_json(StravaData.ATHLETE_URL)
+        resp = self.api.api_request(StravaData.ATHLETE_URL, method="get")
         return resp["firstname"] + " " + resp["lastname"]
+
+    def upload_activity(self, activity_file, name, description="",
+                     trainer=True, commute=False, data_type="tcx", external_id=None):
+        assert os.path.isfile(activity_file)
+        assert data_type in ["fit", "fit.gz", "tcx", "tcx.gz", "gpx", "gpx.gz"]
+        if not external_id:
+            external_id=name
+        post_data = {
+            "activity_file": activity_file,
+            "name": name,
+            "description": description,
+            "trainer": str(trainer),
+            "commute": str(commute),
+            "data_type": data_type,
+            "external_id": external_id
+        }
+        resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL, method="post", post_data=post_data)
+        print("resp")
+#         if resp["error"]
+#         {
+#   "id_str" : "aeiou",
+#   "activity_id" : 6,
+#   "external_id" : "aeiou",
+#   "id" : 0,
+#   "error" : "aeiou",
+#   "status" : "aeiou"
+# }
 
 

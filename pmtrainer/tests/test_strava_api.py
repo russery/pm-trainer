@@ -1,9 +1,10 @@
 import unittest
 import json
+import os
 import tempfile
 from datetime import datetime, timedelta, timezone
 from ..settings import Settings
-from ..strava_api import StravaApi
+from ..strava_api import StravaApi, StravaData
 
 
 class TestStravaApi(unittest.TestCase):
@@ -38,7 +39,7 @@ class TestStravaApi(unittest.TestCase):
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.CLIENT)
 
     def test_api_request(self):
-        resp = json.loads(self.api.api_request(StravaApi.ATHLETE_URL).text)
+        resp = self.api.api_request(StravaApi.ATHLETE_URL)
         # Just check that a response was received and that a key is present:
         self.assertTrue("id" in resp.keys())
 
@@ -108,3 +109,39 @@ class TestStravaApi(unittest.TestCase):
             self.secrets.get("access_token_expire_time")
         with self.assertRaises(KeyError):
             self.secrets.get("refresh_token")
+
+class TestStravaData(unittest.TestCase):
+    def setUp(self):
+        secrets_file = "pm_trainer_settings.ini"
+        self.secrets = Settings()
+        self.secrets.load_settings(secrets_file)
+        self.api = StravaApi(self.secrets)
+        try:
+            if not self.api.is_authed():
+                print("Not authenticated.... going for auth")
+                self.api.get_auth()
+                self.secrets.write_settings(secrets_file)
+            else:
+                print("Using cached auth token")
+        except StravaApi.AuthError as e:
+            if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
+                print("Couldn't authenticate with given client secrets. " \
+                      "Check that they are correct.")
+            raise e
+        self.strava_data = StravaData(self.api)  
+
+    def test_athlete_name(self):
+        name = self.strava_data.get_athlete_name()
+        print(name)
+        self.assertIsNotNone(name)
+
+    def test_upload_activity(self):
+        activity_file = os.path.dirname(__file__) + "/fixtures/sample_tcx_files/20201205_091538.tcx"
+        name = "20201205_091538"
+        description = "test upload"
+        trainer = True
+        commute = False
+        data_type = "tcx"
+        external_id="asdf"
+        resp = self.strava_data.upload_activity(activity_file, name, description, trainer,
+                                                commute, data_type, external_id)

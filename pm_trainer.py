@@ -12,6 +12,7 @@ import PySimpleGUI as sg
 
 import pmtrainer.profile_plotter as profile_plotter
 import pmtrainer.settings as settings
+from pmtrainer.strava_api import StravaApi
 from pmtrainer.ant_sensors import AntSensors
 import pmtrainer.assets.icons as icons
 from pmtrainer.workout_profile import Workout
@@ -19,6 +20,7 @@ from pmtrainer.tcx_file import Tcx, Point
 from pmtrainer.bug_indicator import BugIndicator
 from pmtrainer.bike_sim import BikeSim
 from pmtrainer.settings_dialog import settings_dialog_popup
+
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -149,6 +151,16 @@ def _start_log(ldir):
     lfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
     return lfile
 
+def _upload_activity(config, logfile):
+    strava = StravaApi(config)
+    if not strava.is_authed():
+        strava.get_auth()
+        config.write_settings(config.get("settingsfile"))
+    upload = sg.Popup("Upload activity to Strava?")
+    if upload == "Yes":
+        strava.
+
+
 def _scale_plot_margins(y_lims):
     '''
     Scale the vertical plot and apply standard margins to it.
@@ -272,6 +284,8 @@ while True:
         # Handle window events
         event, _ = window.read(timeout=UPDATE_RATE_MS)
         if event == sg.WIN_CLOSED:
+            if logfile:
+                _upload_activity(cfg, logfile)
             _exit_app()
         if event == "-SETTINGS-":
             settings_dialog_popup(cfg)
