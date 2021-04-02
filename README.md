@@ -13,8 +13,9 @@
 
 
 TODO:
-- GUI: handle settings file without client secrets (prompt user to enter secrets)
-- GUI: Add settings button to do initial auth
+- Flesh out README with details of initial setup (client secrets, etc)
+- 
+
 
 
 

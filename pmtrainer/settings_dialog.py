@@ -59,7 +59,7 @@ def _strava_client_info_popup():
         if e in [sg.WIN_CLOSED, "-CANCEL-"]:
             window.close()
             return None, None
-        elif e is "-SAVE-":
+        elif e == "-SAVE-":
             client_id = window["-CLIENT-ID-"].get()
             client_secret = window["-CLIENT-SECRET-"].get()
             window.close()
@@ -218,7 +218,7 @@ def settings_dialog_popup(config):
                                         StravaApi.AuthError.ErrorType.TIMEOUT,
                                         StravaApi.AuthError.ErrorType.SCOPE]:
                         try_again = sg.PopupYesNo("Could not reach Strava. Try again?")
-                        if try_again is "No":
+                        if try_again == "No":
                             break
                     else:
                         raise e

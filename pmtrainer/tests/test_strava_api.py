@@ -1,5 +1,6 @@
 import unittest
 import json
+import tempfile
 from datetime import datetime, timedelta, timezone
 from ..settings import Settings
 from ..strava_api import StravaApi
@@ -7,7 +8,7 @@ from ..strava_api import StravaApi
 
 class TestStravaApi(unittest.TestCase):
     def setUp(self):
-        secrets_file = "secrets.ini"
+        secrets_file = "pm_trainer_settings.ini"
         self.secrets = Settings()
         self.secrets.load_settings(secrets_file)
         self.api = StravaApi(self.secrets)
