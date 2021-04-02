@@ -5,13 +5,12 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from ..settings import Settings
 from ..strava_api import StravaApi, StravaData
+from pprint import pprint
 
 
 class TestStravaApi(unittest.TestCase):
     def setUp(self):
-        secrets_file = "pm_trainer_settings.ini"
-        self.secrets = Settings()
-        self.secrets.load_settings(secrets_file)
+        self.secrets = Settings("pm_trainer_settings.ini")
         self.api = StravaApi(self.secrets)
         try:
             if not self.api.is_authed():
@@ -19,13 +18,22 @@ class TestStravaApi(unittest.TestCase):
                 self.api.get_auth()
                 self.secrets.write_settings(secrets_file)
             else:
-                print("Using cached auth token")
+                print("Using cached auth token.")
         except StravaApi.AuthError as e:
             if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
                 print("Couldn't authenticate with given client secrets. " \
-                      "Check that they are correct.")
+                      "Check that they exist and are correct.")
             raise e
 
+    def test_force_auth(self):
+        self.api.remove_auth()
+        self.assertFalse(self.api.is_authed())
+        self.api.get_auth()
+        self.assertIsNotNone(self.secrets.get("access_token"))
+        self.assertIsNotNone(self.secrets.get("access_token_expire_time"))
+        self.assertIsNotNone(self.secrets.get("refresh_token"))
+        self.assertTrue(self.api.is_authed())
+        
     def test_no_secrets(self):
         client = self.secrets.get("client_id")
         self.secrets.delete("client_id")
@@ -72,13 +80,6 @@ class TestStravaApi(unittest.TestCase):
         self.secrets.set("access_token_expire_time", expiry)
         self.assertTrue(self.api.is_authed())
 
-    def test_force_auth(self):
-        self.api.remove_auth()
-        self.api.get_auth()
-        self.assertIsNotNone(self.secrets.get("access_token"))
-        self.assertIsNotNone(self.secrets.get("access_token_expire_time"))
-        self.assertIsNotNone(self.secrets.get("refresh_token"))
-
     def test_renew_auth(self):
         self.api.get_auth()
         old_expiry = int(self.secrets.get("access_token_expire_time"))
@@ -96,6 +97,9 @@ class TestStravaApi(unittest.TestCase):
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.TIMEOUT)
 
     def test_auth_scope(self):
+        # Requires user interaction to pass... To do this correctly:
+        # When the Strava auth browser window pops up, de-select permissions for activity upload
+        # and then click Authorize.
         with self.assertRaises(StravaApi.AuthError) as e:
             self.api.get_tokens()
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.SCOPE)
@@ -136,12 +140,21 @@ class TestStravaData(unittest.TestCase):
         self.assertIsNotNone(name)
 
     def test_upload_activity(self):
-        activity_file = os.path.dirname(__file__) + "/fixtures/sample_tcx_files/20201205_091538.tcx"
+        activity_file = os.path.dirname(__file__) + "/fixtures/sample_tcx_files/20210325_160413.tcx"
         name = "20201205_091538"
         description = "test upload"
         trainer = True
         commute = False
         data_type = "tcx"
         external_id="asdf"
-        resp = self.strava_data.upload_activity(activity_file, name, description, trainer,
-                                                commute, data_type, external_id)
+        try:
+            resp = self.strava_data.upload_activity(activity_file=activity_file, name=name,
+                                                      description=description, trainer=trainer,
+                                                      commute=commute, data_type=data_type,
+                                                      activity_type="VirtualRide")
+            pprint(resp)
+            self.assertIsNotNone(resp["id"])
+        except StravaApi.AuthError as e:
+            # This type of error can occur for duplicate activity uploads. To prevent it
+            # make sure that the test activity being uploaded is unique.
+            self.assertEqual(e.err_type, StravaApi.AuthError.ErrorType.UNKNOWN)

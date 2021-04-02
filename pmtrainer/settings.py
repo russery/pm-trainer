@@ -7,10 +7,14 @@ class Settings():
     '''
     Handles reading and writing settings from a file
     '''
-    def __init__(self):
+    def __init__(self, filename=None, defaults=None):
         self.config = cp.ConfigParser()
         self._active_section = "DEFAULT"
         self.config[self._active_section] = {}
+        if filename:
+            self.load_settings(filename=filename)
+        if defaults:
+            self.load_settings(defaults=defaults)
 
     def load_settings(self, filename=None, defaults=None):
         '''

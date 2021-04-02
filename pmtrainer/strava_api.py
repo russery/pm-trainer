@@ -21,7 +21,7 @@ class StravaApi():
     TOKEN_URL = "https://www.strava.com/oauth/token"
     ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
 
-    AUTH_SCOPE = "activity:write"
+    AUTH_SCOPE = ["activity:write"]
 
     SERVER_HOSTNAME = "localhost"
     SERVER_PORT = 8080
@@ -69,6 +69,11 @@ class StravaApi():
             '''
             Handles page request from Strava Oauth2 redirect.
             '''
+            # Ignore favicon requests
+            if self.path.endswith("favicon.ico"):
+                return
+
+            # Parse response and extract auth code and scopes:
             resp = self.path.lstrip("/?").split("&")
             code = None
             scopes = None
@@ -77,14 +82,10 @@ class StravaApi():
                     code = r.replace("code=", "")
                 if "scope=" in r:
                     scopes = r.replace("scope=", "").split(",")
-            if code:
-                StravaApi.AuthCodeHandler.auth_code = code
-            if scopes:
-                StravaApi.AuthCodeHandler.auth_scopes = scopes
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            if code and StravaApi.AUTH_SCOPE in scopes:
+            if code and all(x in scopes for x in StravaApi.AUTH_SCOPE):
                 self.wfile.write(bytes(auth_page.strava_auth_confirm_page.format(
                     success_msg="You've successfully authenticated",
                     action_msg="Please close this window and return to PM Trainer"),
@@ -94,7 +95,12 @@ class StravaApi():
                     success_msg="Failed to authenticate",
                     action_msg="Please close this window, return to PM Trainer, and try again."),
                     "utf-8"))
+            
+            if code and scopes:
+                StravaApi.AuthCodeHandler.auth_code = code
+                StravaApi.AuthCodeHandler.auth_scopes = scopes
             StravaApi.AuthCodeHandler.callback_received = True
+
 
     def __init__(self, secrets_store):
         self.secrets_store = secrets_store
@@ -126,12 +132,13 @@ class StravaApi():
                 raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.CLIENT,
                     message="Could not find {}".format(str(e)))
 
-    def api_request(self, url, method="get", post_data=None, auth=True):
+    def api_request(self, url, method="get", data=None, auth=True, post_file=None):
         '''
         Issues an API request, and checks returned headers and response.
         Returns API response.
         '''
-        assert method in ["get", "post"]
+        method = method.lower()
+        assert method in ["get", "post", "put"]
 
         if auth:
             try:
@@ -146,12 +153,15 @@ class StravaApi():
         if method == "get":
             response = requests.get(url, headers=headers, verify=True)
         elif method == "post":
-            print(post_data)
-            response = requests.post(url, data=post_data, headers=headers, verify=True)
+            file_dict = None
+            if post_file:
+                file_dict = {'file': open(post_file, 'rb')}
+            response = requests.post(url, data=data, headers=headers, verify=True, files=file_dict)
+        elif method == "put":
+            response = requests.put(url, data=data, headers=headers, verify=True)
 
         response_data = json.loads(response.text)
-        if ((response.status_code != 200) or
-            ("API Error" in response_data.values())):
+        if response.status_code  not in [200, 201]:
             raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.HTTP_RESP,
                 message="API request got response:\r\n\n{}\r\n\n{}".format(
                     response.headers, response_data))
@@ -218,23 +228,25 @@ class StravaApi():
             StravaApi.SERVER_PORT), StravaApi.AuthCodeHandler)
         self.httpd_thread = Thread(target=self._do_server, args=(1,), daemon=True)
         self.httpd_thread.start()
-        authorization_redirect_url = StravaApi.AUTH_URL + "?response_type=code" + \
+        auth_url = StravaApi.AUTH_URL + "?response_type=code" + \
                             "&client_id=" + self.secrets_store.get("client_id") + \
                             "&redirect_uri=" + StravaApi.SERVER_CALLBACK_URI + \
-                            "&scope="+ StravaApi.AUTH_SCOPE + "&approval_prompt=auto"
+                            "&scope="+",".join(StravaApi.AUTH_SCOPE) + "&approval_prompt=auto"
+        
         # Open web browser with authorization URL
-        #webbrowser.open(authorization_redirect_url)
-        # Using "webbrowser" causes XQuartz to launch, so do it a hacky way instead:
-        # see: https://bugs.python.org/issue43111
+            #webbrowser.open(authorization_redirect_url)
+            # Using "webbrowser" causes XQuartz to launch, so do it a hacky way instead:
+            # see: https://bugs.python.org/issue43111
         if sys.platform=="win32":
-            os.startfile(authorization_redirect_url)
+            os.startfile(auth_url)
         elif sys.platform=="darwin":
-            subprocess.Popen(["open", authorization_redirect_url])
+            subprocess.Popen(["open", auth_url])
         else:
             try:
-                subprocess.Popen(["xdg-open", authorization_redirect_url])
+                subprocess.Popen(["xdg-open", auth_url])
             except OSError:
-                print("Please open this link in a browser: " + authorization_redirect_url)
+                print("Please open this link in a browser: " + auth_url)
+        
         # Wait for Strava API to reply with auth code
         auth_timeout_seconds_remaining = 30
         while not StravaApi.AuthCodeHandler.callback_received:
@@ -248,7 +260,7 @@ class StravaApi():
             self._kill_httpd()
             raise StravaApi.AuthError("Auth code not received.",
                                         err_type=StravaApi.AuthError.ErrorType.HTTP_RESP)
-        if StravaApi.AUTH_SCOPE not in StravaApi.AuthCodeHandler.auth_scopes:
+        if not all(x in StravaApi.AuthCodeHandler.auth_scopes for x in StravaApi.AUTH_SCOPE):
             self._kill_httpd()
             raise StravaApi.AuthError("Authorization scope error. Expected {} got {}".format(
                                         StravaApi.AUTH_SCOPE,
@@ -274,14 +286,12 @@ class StravaApi():
             "client_id": self.secrets_store.get("client_id"),
             "client_secret": self.secrets_store.get("client_secret")})
 
-    def _send_token_request(self, post_data):
+    def _send_token_request(self, data):
         response = self.api_request(StravaApi.TOKEN_URL, method="post",
-                                post_data=post_data, auth=False)
+                                data=data, auth=False)
         self.secrets_store.set("access_token", response["access_token"])
         self.secrets_store.set("refresh_token", response["refresh_token"])
         self.secrets_store.set("access_token_expire_time", str(response["expires_at"]))
-
-        assert self.is_authed()
 
 class StravaData():
     """
@@ -289,6 +299,7 @@ class StravaData():
     """
     ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
     ACTIVITY_UPLOAD_URL = "https://www.strava.com/api/v3/uploads"
+    ACTIVITY_URL = "https://www.strava.com/api/v3/activities"
 
     def __init__(self, api):
         self.api = api
@@ -298,13 +309,17 @@ class StravaData():
         return resp["firstname"] + " " + resp["lastname"]
 
     def upload_activity(self, activity_file, name, description="",
-                     trainer=True, commute=False, data_type="tcx", external_id=None):
+                     trainer=True, commute=False, activity_type="VirtualRide",
+                     data_type="tcx", external_id=None, gear_id="PM Trainer"):
+        '''
+        Upload an activity to Strava, and return the Strava activity_id if successful.
+        '''
         assert os.path.isfile(activity_file)
         assert data_type in ["fit", "fit.gz", "tcx", "tcx.gz", "gpx", "gpx.gz"]
         if not external_id:
             external_id=name
-        post_data = {
-            "activity_file": activity_file,
+        # Upload the activity to Strava:
+        data = {
             "name": name,
             "description": description,
             "trainer": str(trainer),
@@ -312,16 +327,38 @@ class StravaData():
             "data_type": data_type,
             "external_id": external_id
         }
-        resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL, method="post", post_data=post_data)
-        print("resp")
-#         if resp["error"]
-#         {
-#   "id_str" : "aeiou",
-#   "activity_id" : 6,
-#   "external_id" : "aeiou",
-#   "id" : 0,
-#   "error" : "aeiou",
-#   "status" : "aeiou"
-# }
+        resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL, method="post",
+                                    data=data, post_file=activity_file)        
+        # Wait for it to finish processing
+        upload_id = resp["id"]
+        timeout_seconds_remaining = 60
+        while True:
+            TIME_STEP_SECONDS = 10 # Strava says mean processing time is 8s for uploads
+            time.sleep(TIME_STEP_SECONDS) 
+            timeout_seconds_remaining -= TIME_STEP_SECONDS
+            
+            resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL+"/"+str(upload_id), method="get")
+            activity_id = resp["activity_id"]
+            error = resp["error"]
+            if activity_id:
+                break
+            if error:
+                raise StravaApi.AuthError("Received an error from Strava: {}".format(error))
+            if timeout_seconds_remaining <= 0:
+                raise StravaApi.AuthError("Timed out waiting for response",
+                                          err_type=StravaApi.AuthError.ErrorType.TIMEOUT)
+
+        # Update activity with correct type and other fields
+        data = {
+            "name": name,
+            "description": description,
+            "trainer": str(trainer),
+            "commute": str(commute),
+            "type": activity_type,
+            "gear_id": gear_id
+        }
+        resp = self.api.api_request(StravaData.ACTIVITY_URL+"/"+str(activity_id),
+                                   method="put", data=data, post_file=activity_file)
+        return resp
 
 
