@@ -53,8 +53,18 @@ class StravaApi():
         Handles redirect from Strava Oauth2 interface, captures auth code
         and displays a nice page for the user.
         '''
+        callback_received = False
         auth_code = None
         auth_scopes = []
+        
+        def reset():
+            '''
+            Resets static members of this class.
+            '''
+            StravaApi.AuthCodeHandler.callback_received = False
+            StravaApi.AuthCodeHandler.auth_code = None
+            StravaApi.AuthCodeHandler.auth_scopes = []
+
         def do_GET(self):
             '''
             Handles page request from Strava Oauth2 redirect.
@@ -74,18 +84,35 @@ class StravaApi():
             self.send_response(200)
             self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(bytes(auth_page.strava_auth_confirm_page, "utf-8"))
+            if code and StravaApi.AUTH_SCOPE in scopes:
+                self.wfile.write(bytes(auth_page.strava_auth_confirm_page.format(
+                    success_msg="You've successfully authenticated",
+                    action_msg="Please close this window and return to PM Trainer"),
+                    "utf-8"))
+            else:
+                self.wfile.write(bytes(auth_page.strava_auth_confirm_page.format(
+                    success_msg="Failed to authenticate",
+                    action_msg="Please close this window, return to PM Trainer, and try again."),
+                    "utf-8"))
+            StravaApi.AuthCodeHandler.callback_received = True
 
     def __init__(self, secrets_store):
         self.secrets_store = secrets_store
-        self.httpd = None # only instantiate this if/when we need it
-        self.httpd_thread = Thread(target=self._do_server, args=(1,), daemon=True)
+        self.httpd = None # Only instantiate this if/when we need it
+        self.httpd_thread = None
 
     def _do_server(self, _):
         '''
         Thread function for http daemon thread.
         '''
         self.httpd.serve_forever()
+
+    def _kill_httpd(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+        time.sleep(1) # Make sure the server is closed...
+        self.httpd_thread.join()
+        StravaApi.AuthCodeHandler.reset()
 
     def check_secrets(self):
         '''
@@ -104,7 +131,12 @@ class StravaApi():
         Issues an API request, and checks returned headers and response.
         Returns API response.
         '''
-        token = self.secrets_store.get("access_token")
+        try:
+            token = self.secrets_store.get("access_token")
+        except KeyError as e:
+            raise StravaApi.AuthError(err_type=StravaApi.AuthError.ErrorType.CLIENT,
+                    message="Could not find {}".format(str(e)))
+
         headers = {'Authorization': 'Bearer ' + token}
         response = requests.get(url, headers=headers, verify=True)
         response_data = json.loads(response.text)
@@ -152,6 +184,20 @@ class StravaApi():
             else:
                 raise e
 
+    def remove_auth(self):
+        try:
+            self.secrets_store.delete("access_token")
+        except KeyError:
+            pass
+        try:
+            self.secrets_store.delete("access_token_expire_time")
+        except KeyError:
+            pass
+        try:
+            self.secrets_store.delete("refresh_token")
+        except KeyError:
+            pass
+
     def get_tokens(self):
         '''
         Get an auth code and exchange for auth and refresh tokens.
@@ -160,6 +206,7 @@ class StravaApi():
         # Launch the webserver thread to monitor for API response
         self.httpd = HTTPServer((StravaApi.SERVER_HOSTNAME,
             StravaApi.SERVER_PORT), StravaApi.AuthCodeHandler)
+        self.httpd_thread = Thread(target=self._do_server, args=(1,), daemon=True)
         self.httpd_thread.start()
         authorization_redirect_url = StravaApi.AUTH_URL + "?response_type=code" + \
                             "&client_id=" + self.secrets_store.get("client_id") + \
@@ -180,26 +227,30 @@ class StravaApi():
                 print("Please open this link in a browser: " + authorization_redirect_url)
         # Wait for Strava API to reply with auth code
         auth_timeout_seconds_remaining = 30
-        while not StravaApi.AuthCodeHandler.auth_code:
+        while not StravaApi.AuthCodeHandler.callback_received:
             time.sleep(1.0)
             auth_timeout_seconds_remaining -= 1
             if auth_timeout_seconds_remaining <= 0:
+                self._kill_httpd()
                 raise StravaApi.AuthError("Timed out waiting for auth code",
                                           err_type=StravaApi.AuthError.ErrorType.TIMEOUT)
+        if not StravaApi.AuthCodeHandler.auth_code:
+            self._kill_httpd()
+            raise StravaApi.AuthError("Auth code not received.",
+                                        err_type=StravaApi.AuthError.ErrorType.HTTP_RESP)
         if StravaApi.AUTH_SCOPE not in StravaApi.AuthCodeHandler.auth_scopes:
+            self._kill_httpd()
             raise StravaApi.AuthError("Authorization scope error. Expected {} got {}".format(
                                         StravaApi.AUTH_SCOPE,
                                         StravaApi.AuthCodeHandler.auth_scopes),
                                         err_type=StravaApi.AuthError.ErrorType.SCOPE)
-
-        self.secrets_store.set("authorization_code", StravaApi.AuthCodeHandler.auth_code)
-        self.httpd.server_close()
-        self.httpd.shutdown()
+        auth_code = StravaApi.AuthCodeHandler.auth_code
+        self._kill_httpd()
 
         # Exchange auth code for access token and refresh token
         self._send_token_request({
             "grant_type": "authorization_code",
-            "code": self.secrets_store.get("authorization_code"),
+            "code": auth_code,
             "client_id": self.secrets_store.get("client_id"),
             "client_secret": self.secrets_store.get("client_secret")})
 
@@ -227,3 +278,22 @@ class StravaApi():
         self.secrets_store.set("access_token_expire_time", str(response_data["expires_at"]))
 
         assert self.is_authed()
+
+class StravaData():
+    """
+    Interacts with the Strava API to perform various tasks.
+    """
+    ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
+
+
+    def __init__(self, api):
+        self.api = api
+
+    def _api_request_json(self, url):
+        return json.loads(self.api.api_request(url).text)
+
+    def get_athlete_name(self):
+        resp = self._api_request_json(StravaData.ATHLETE_URL)
+        return resp["firstname"] + " " + resp["lastname"]
+
+

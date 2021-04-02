@@ -15,7 +15,6 @@
 TODO:
 - GUI: handle settings file without client secrets (prompt user to enter secrets)
 - GUI: Add settings button to do initial auth
-- Display a nice page after oauth redirect
 
 
 

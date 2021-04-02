@@ -71,9 +71,7 @@ class TestStravaApi(unittest.TestCase):
         self.assertTrue(self.api.is_authed())
 
     def test_force_auth(self):
-        self.secrets.delete("access_token")
-        self.secrets.delete("access_token_expire_time")
-        self.secrets.delete("refresh_token")
+        self.api.remove_auth()
         self.api.get_auth()
         self.assertIsNotNone(self.secrets.get("access_token"))
         self.assertIsNotNone(self.secrets.get("access_token_expire_time"))
@@ -99,3 +97,13 @@ class TestStravaApi(unittest.TestCase):
         with self.assertRaises(StravaApi.AuthError) as e:
             self.api.get_tokens()
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.SCOPE)
+
+    def test_remove_auth(self):
+        self.api.remove_auth()
+        self.assertFalse(self.api.is_authed())
+        with self.assertRaises(KeyError):
+            self.secrets.get("access_token")
+        with self.assertRaises(KeyError):
+            self.secrets.get("access_token_expire_time")
+        with self.assertRaises(KeyError):
+            self.secrets.get("refresh_token")

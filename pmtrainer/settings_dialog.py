@@ -6,6 +6,7 @@ import os
 import PySimpleGUI as sg
 from pmtrainer.profile_plotter import plot_blocks
 from pmtrainer.workout_profile import Workout
+from pmtrainer.strava_api import StravaApi, StravaData
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''
@@ -26,12 +27,43 @@ def _set_workout_fields(window, workout_path):
     window["-WKT-DUR-"].update("Duration: {:d}min".format(int(wkt.duration_s / 60)))
     window["-WKT-DESC-"].update(wkt.description)
 
+def _set_strava_status(window, strava):
+    if strava.is_authed():
+        athlete_name = StravaData(strava).get_athlete_name()
+        window["-STRAVA-AUTH-STATUS-"].Update("Connected to Strava as {}.".format(athlete_name))
+    else:
+        window["-STRAVA-AUTH-STATUS-"].Update("Not connected to Strava.")
+
 def _highlight_active_workout(window, workouts, workout_path):
     for w in workouts.values():
         if workout_path == w["path"]:
             window[w["workout"].name+"-sel"].Widget.config(background="red")
         else:
             window[w["workout"].name+"-sel"].Widget.config(background="gray")
+
+def _strava_client_info_popup():
+    layout = [[sg.Text("Missing Strava Client info.\r\n" \
+                       "Please get 'client_id' and 'client_secret' from Strava " \
+                       "as described here:\r"\
+                       "https://github.com/russery/pm-trainer#strava-api-access", (60,4))],
+              [sg.T("client_id:", (15,1)),
+               sg.I("", (6,1), key="-CLIENT-ID-", focus=True, tooltip="client_id")],
+              [sg.T("client_secret:", (15,1)),
+               sg.I("", (41,1), key="-CLIENT-SECRET-", tooltip="client_secret")],
+              [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]]
+    window = sg.Window("Enter Strava Client Info", layout,
+        use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
+
+    while True:
+        e, v = window.read()
+        if e in [sg.WIN_CLOSED, "-CANCEL-"]:
+            window.close()
+            return None, None
+        elif e is "-SAVE-":
+            client_id = window["-CLIENT-ID-"].get()
+            client_secret = window["-CLIENT-SECRET-"].get()
+            window.close()
+            return client_id, client_secret
 
 def workout_selection_popup(workout_path):
     '''
@@ -99,7 +131,6 @@ def workout_selection_popup(workout_path):
         else:
             print(e)
 
-
 def settings_dialog_popup(config):
     '''
     A dialog box to change persistent settings saved in the config file.
@@ -124,8 +155,10 @@ def settings_dialog_popup(config):
              [sg.T("duration", (30,1), key="-WKT-DUR-")],
              [sg.T("description", (40,2), key="-WKT-DESC-")]],
              vertical_alignment="t")],
-        [sg.Frame("System",
-            [[sg.T("Log Path:"), sg.Input(log_directory, k="-LOGDIRECTORY-"),
+        [sg.Frame("Activity Tracking",
+            [[sg.B("Strava Connect", key="-STRAVA-BTTN-"),
+              sg.T("Auth status", (30,1), key="-STRAVA-AUTH-STATUS-")],
+             [sg.T("Local Log Path:"), sg.Input(log_directory, k="-LOGDIRECTORY-"),
               sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
                               target="-LOGDIRECTORY-")]])],
         [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
@@ -133,7 +166,13 @@ def settings_dialog_popup(config):
     window = sg.Window("Settings", settings_layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
 
+    # Initialize workout info:
     _set_workout_fields(window, config.get("Workout"))
+
+    # Initialize Strava link status:
+    strava = StravaApi(config)
+    _set_strava_status(window, strava)
+
     window.refresh()
 
     while True:
@@ -162,6 +201,27 @@ def settings_dialog_popup(config):
             new_workout_path = workout_selection_popup(config.get("Workout"))
             _set_workout_fields(window, new_workout_path)
             config.set("Workout", new_workout_path)
-
+        if e == "-STRAVA-BTTN-":
+            strava.remove_auth()
+            while not strava.is_authed():
+                try:
+                    strava.get_auth()
+                except StravaApi.AuthError as e:
+                    if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
+                        client_id, client_secret = _strava_client_info_popup()
+                        if client_id and client_secret:
+                            config.set("client_id", client_id)
+                            config.set("client_secret", client_secret)
+                        else:
+                            break
+                    elif e.err_type in [StravaApi.AuthError.ErrorType.HTTP_RESP,
+                                        StravaApi.AuthError.ErrorType.TIMEOUT,
+                                        StravaApi.AuthError.ErrorType.SCOPE]:
+                        try_again = sg.PopupYesNo("Could not reach Strava. Try again?")
+                        if try_again is "No":
+                            break
+                    else:
+                        raise e
+            _set_strava_status(window, strava)
         else:
             print(e)
