@@ -108,8 +108,11 @@ class Tcx():
 
     @property
     def activities(self):
+        '''
+        Returns the handle of any Activity tags in the file.
+        '''
         return self.tcx.find("Activities", NAMESPACES)
-    
+
     def set_current_activity(self, activity_index=0):
         '''
         Sets the current activity to the one specified by activity_index

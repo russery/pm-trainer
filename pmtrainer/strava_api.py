@@ -56,7 +56,7 @@ class StravaApi():
         callback_received = False
         auth_code = None
         auth_scopes = []
-        
+
         def reset():
             '''
             Resets static members of this class.
@@ -95,7 +95,7 @@ class StravaApi():
                     success_msg="Failed to authenticate",
                     action_msg="Please close this window, return to PM Trainer, and try again."),
                     "utf-8"))
-            
+
             if code and scopes:
                 StravaApi.AuthCodeHandler.auth_code = code
                 StravaApi.AuthCodeHandler.auth_scopes = scopes
@@ -205,6 +205,9 @@ class StravaApi():
                 raise e
 
     def remove_auth(self):
+        '''
+        Removes auth and refresh tokens from the secrets store if they exist.
+        '''
         try:
             self.secrets_store.delete("access_token")
         except KeyError:
@@ -232,7 +235,7 @@ class StravaApi():
                             "&client_id=" + self.secrets_store.get("client_id") + \
                             "&redirect_uri=" + StravaApi.SERVER_CALLBACK_URI + \
                             "&scope="+",".join(StravaApi.AUTH_SCOPE) + "&approval_prompt=auto"
-        
+
         # Open web browser with authorization URL
             #webbrowser.open(authorization_redirect_url)
             # Using "webbrowser" causes XQuartz to launch, so do it a hacky way instead:
@@ -246,7 +249,7 @@ class StravaApi():
                 subprocess.Popen(["xdg-open", auth_url])
             except OSError:
                 print("Please open this link in a browser: " + auth_url)
-        
+
         # Wait for Strava API to reply with auth code
         auth_timeout_seconds_remaining = 30
         while not StravaApi.AuthCodeHandler.callback_received:
@@ -305,6 +308,9 @@ class StravaData():
         self.api = api
 
     def get_athlete_name(self):
+        '''
+        Get the athlete first and last name (e.g. "Berto Lucci").
+        '''
         resp = self.api.api_request(StravaData.ATHLETE_URL, method="get")
         return resp["firstname"] + " " + resp["lastname"]
 
@@ -328,16 +334,17 @@ class StravaData():
             "external_id": external_id
         }
         resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL, method="post",
-                                    data=data, post_file=activity_file)        
+                                    data=data, post_file=activity_file)
         # Wait for it to finish processing
         upload_id = resp["id"]
         timeout_seconds_remaining = 60
         while True:
             TIME_STEP_SECONDS = 10 # Strava says mean processing time is 8s for uploads
-            time.sleep(TIME_STEP_SECONDS) 
+            time.sleep(TIME_STEP_SECONDS)
             timeout_seconds_remaining -= TIME_STEP_SECONDS
-            
-            resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL+"/"+str(upload_id), method="get")
+
+            resp = self.api.api_request(StravaData.ACTIVITY_UPLOAD_URL+"/"+str(upload_id),
+                                        method="get")
             activity_id = resp["activity_id"]
             error = resp["error"]
             if activity_id:
@@ -360,5 +367,3 @@ class StravaData():
         resp = self.api.api_request(StravaData.ACTIVITY_URL+"/"+str(activity_id),
                                    method="put", data=data, post_file=activity_file)
         return resp
-
-

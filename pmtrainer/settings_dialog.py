@@ -55,7 +55,7 @@ def _strava_client_info_popup():
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
 
     while True:
-        e, v = window.read()
+        e, _ = window.read()
         if e in [sg.WIN_CLOSED, "-CANCEL-"]:
             window.close()
             return None, None
