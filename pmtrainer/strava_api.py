@@ -243,10 +243,10 @@ class StravaApi():
         if sys.platform=="win32":
             os.startfile(auth_url)
         elif sys.platform=="darwin":
-            subprocess.run(["open", auth_url])
+            subprocess.run(["open", auth_url], check=True)
         else:
             try:
-                subprocess.run(["xdg-open", auth_url])
+                subprocess.run(["xdg-open", auth_url], check=True)
             except OSError:
                 print("Please open this link in a browser: " + auth_url)
         # Wait for Strava API to reply with auth code

@@ -1,12 +1,9 @@
 import unittest
-import json
 import os
-import tempfile
 from datetime import datetime, timedelta, timezone
+from pprint import pprint
 from ..settings import Settings
 from ..strava_api import StravaApi, StravaData
-from pprint import pprint
-
 
 class TestStravaApi(unittest.TestCase):
     def setUp(self):
@@ -16,7 +13,7 @@ class TestStravaApi(unittest.TestCase):
             if not self.api.is_authed():
                 print("Not authenticated.... going for auth")
                 self.api.get_auth()
-                self.secrets.write_settings(secrets_file)
+                self.secrets.write_settings(self.secrets.get("settingsfile"))
             else:
                 print("Using cached auth token.")
         except StravaApi.AuthError as e:
@@ -92,7 +89,7 @@ class TestStravaApi(unittest.TestCase):
 
     def test_auth_timeout(self):
         url_bak = StravaApi.AUTH_URL
-        StravaApi.AUTH_URL = "fake url"
+        StravaApi.AUTH_URL = "http://fakeurl/"
         with self.assertRaises(StravaApi.AuthError) as e:
             self.api.get_tokens()
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.TIMEOUT)
@@ -148,7 +145,6 @@ class TestStravaData(unittest.TestCase):
         trainer = True
         commute = False
         data_type = "tcx"
-        external_id="asdf"
         try:
             resp = self.strava_data.upload_activity(activity_file=activity_file, name=name,
                                                       description=description, trainer=trainer,

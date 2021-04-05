@@ -19,7 +19,7 @@ from pmtrainer.workout_profile import Workout
 from pmtrainer.tcx_file import Tcx, Point
 from pmtrainer.bug_indicator import BugIndicator
 from pmtrainer.bike_sim import BikeSim
-from pmtrainer.settings_dialog import settings_dialog_popup, strava_client_info_popup, \
+from pmtrainer.settings_dialog import settings_dialog_popup, \
                                       set_strava_status, handle_strava_auth_button
 
 
