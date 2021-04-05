@@ -187,7 +187,7 @@ def _upload_activity(config, logfile, workout):
             if sg.PopupYesNo("Really discard this activity?") == "Yes":
                 break
         elif e == "-STRAVA-BTTN-":
-            handle_strava_auth_button(strava_api)
+            handle_strava_auth_button(strava_api, config)
             config.write_settings(config.get("settingsfile"))
             set_strava_status(window, strava_api)
             if strava_api.is_authed():

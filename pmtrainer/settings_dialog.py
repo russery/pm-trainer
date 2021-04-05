@@ -66,7 +66,7 @@ def strava_client_info_popup():
             window.close()
             return client_id, client_secret
 
-def handle_strava_auth_button(strava_api):
+def handle_strava_auth_button(strava_api, config):
     strava_api.remove_auth()
     while not strava_api.is_authed():
         try:
@@ -124,7 +124,7 @@ def workout_selection_popup(workout_path):
                            enable_events=True)]])
                     ]])
         layout.extend([[frame]])
-    layout.extend([[sg.B("Save", key="-SAVE-", bind_return_key=True),
+    layout.extend([[sg.B("Select", key="-SELECT-", bind_return_key=True),
                     sg.B("Cancel", key="-CANCEL-")]])
     window = sg.Window("Select a Workout", layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
@@ -144,7 +144,7 @@ def workout_selection_popup(workout_path):
         if e in (sg.WIN_CLOSED, "-CANCEL-"):
             window.close()
             return workout_path
-        elif e == "-SAVE-":
+        elif e == "-SELECT-":
             window.close()
             return new_workout_path
         elif "-graph" in e: # Click events on a workout graph
@@ -226,7 +226,7 @@ def settings_dialog_popup(config):
             _set_workout_fields(window, new_workout_path)
             config.set("Workout", new_workout_path)
         if e == "-STRAVA-BTTN-":
-            handle_strava_auth_button(strava)
+            handle_strava_auth_button(strava, config)
             set_strava_status(window, strava)
         else:
             print(e)
