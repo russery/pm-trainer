@@ -12,14 +12,15 @@ import PySimpleGUI as sg
 
 import pmtrainer.profile_plotter as profile_plotter
 import pmtrainer.settings as settings
-from pmtrainer.strava_api import StravaApi
+from pmtrainer.strava_api import StravaApi, StravaData
 from pmtrainer.ant_sensors import AntSensors
 import pmtrainer.assets.icons as icons
 from pmtrainer.workout_profile import Workout
 from pmtrainer.tcx_file import Tcx, Point
 from pmtrainer.bug_indicator import BugIndicator
 from pmtrainer.bike_sim import BikeSim
-from pmtrainer.settings_dialog import settings_dialog_popup
+from pmtrainer.settings_dialog import settings_dialog_popup, strava_client_info_popup, \
+                                      set_strava_status, handle_strava_auth_button
 
 
 DEFAULT_SETTINGS = {
@@ -107,10 +108,6 @@ def _exit_app(status=0):
     Exit cleanly, closing window, writing logfile, and freeing ANT+ resources.
     '''
     try:
-        logfile.flush()
-    except NameError:
-        pass
-    try:
         window.close()
     except NameError:
         pass
@@ -151,15 +148,61 @@ def _start_log(ldir):
     lfile.start_activity(activity_type=Tcx.ActivityType.OTHER)
     return lfile
 
-def _upload_activity(config, logfile):
-    strava = StravaApi(config)
-    if not strava.is_authed():
-        strava.get_auth()
-        config.write_settings(config.get("settingsfile"))
-    upload = sg.Popup("Upload activity to Strava?")
-    if upload == "Yes":
-        strava.
+def _upload_activity(config, logfile, workout):
+    layout = [[sg.T("Upload activity to Strava?")],
+              [sg.B("Strava Connect", key="-STRAVA-BTTN-"),
+               sg.T("Auth status", (30,1), key="-STRAVA-AUTH-STATUS-")],
+              [sg.Frame("Summary", layout=[
+                  [sg.T("Distance", (24,1), key="-DIST-"),
+                   sg.T("Time", (24,1), key="-TIME-")],
+                  [sg.T("Activity Name:", (15,1)),
+                   sg.I(workout.name, text_color="gray", enable_events=True,
+                        size=(40,1), key="-NAME-", metadata="default")],
+                  [sg.T("Description:", (15,1)),
+                   sg.I(workout.description, text_color="gray", enable_events=True,
+                        size=(40,1), key="-DESC-", metadata="default")]])],
+              [sg.B("Upload", key="-UPLOAD-", disabled=True), sg.B("Discard", key="-DISCARD-")]]
+    window = sg.Window("Upload Activity", layout=layout)
 
+    window.finalize()
+    # Update Strava status:
+    strava_api = StravaApi(config)
+    set_strava_status(window, strava_api)
+    if strava_api.is_authed():
+        window["-UPLOAD-"].update(disabled=False)
+    # Update workout info:
+    time_s, distance_m = logfile.get_lap_stats()
+    window["-DIST-"].update("Distance: {:4.1f}miles".format(float(distance_m)/1609.34))
+    window["-TIME-"].update("Time: {:4.0f} minutes".format(float(time_s)/60))
+    window.refresh()
+
+    while True:
+        e, _ = window.read()
+        if e in [sg.WIN_CLOSED, "-DISCARD-"]:
+            break
+        elif e == "-STRAVA-BTTN-":
+            handle_strava_auth_button(strava_api)
+            config.write_settings(config.get("settingsfile"))
+            set_strava_status(window, strava_api)
+            if strava_api.is_authed():
+                window["-UPLOAD-"].update(disabled=False)
+        elif e in ["-NAME-", "-DESC-"]:
+            if window[e].metadata == "default":
+                dft_text = window[e].get()
+                window[e].update(value=window[e].get().lstrip(dft_text),text_color="Black")
+                window[e].metadata = ""
+        elif e == "-UPLOAD-":
+            try:
+                StravaData(strava_api).upload_activity(activity_file=logfile.file_name,
+                                        name=window["-NAME-"].get(),
+                                        description=window["-DESC-"].get(),
+                                        trainer=True, commute=False,
+                                        activity_type="VirtualRide", gear_id="PM Trainer")
+                sg.Popup("Uploaded successfully!")
+            except StravaApi.AuthError as e:
+                sg.Popup("Upload failed: \r\n{}".format(e.message))
+            break
+    window.close()
 
 def _scale_plot_margins(y_lims):
     '''
@@ -285,7 +328,8 @@ while True:
         event, _ = window.read(timeout=UPDATE_RATE_MS)
         if event == sg.WIN_CLOSED:
             if logfile:
-                _upload_activity(cfg, logfile)
+                logfile.flush()
+                _upload_activity(cfg, logfile, workout)
             _exit_app()
         if event == "-SETTINGS-":
             settings_dialog_popup(cfg)
@@ -393,7 +437,7 @@ while True:
                                         power_watts=power,
                                         distance_m=sim.total_distance_m,
                                         speed_mps=sim.speed_mps))
-                logfile.set_lap_stats(total_time_s=t.get_time().seconds)
+                logfile.set_lap_stats(total_time_s=t.get_time().seconds, distance_m=sim.total_distance_m)
                 logfile.flush()
 
     except AntSensors.SensorError as e:

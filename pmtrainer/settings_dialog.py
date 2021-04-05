@@ -27,7 +27,7 @@ def _set_workout_fields(window, workout_path):
     window["-WKT-DUR-"].update("Duration: {:d}min".format(int(wkt.duration_s / 60)))
     window["-WKT-DESC-"].update(wkt.description)
 
-def _set_strava_status(window, strava):
+def set_strava_status(window, strava):
     if strava.is_authed():
         athlete_name = StravaData(strava).get_athlete_name()
         window["-STRAVA-AUTH-STATUS-"].Update("Connected to Strava as {}.".format(athlete_name))
@@ -41,7 +41,7 @@ def _highlight_active_workout(window, workouts, workout_path):
         else:
             window[w["workout"].name+"-sel"].Widget.config(background="gray")
 
-def _strava_client_info_popup():
+def strava_client_info_popup():
     layout = [[sg.Text("Missing Strava Client info.\r\n" \
                        "Please get 'client_id' and 'client_secret' from Strava " \
                        "as described here:\r"\
@@ -64,6 +64,28 @@ def _strava_client_info_popup():
             client_secret = window["-CLIENT-SECRET-"].get()
             window.close()
             return client_id, client_secret
+
+def handle_strava_auth_button(strava_api):
+    strava_api.remove_auth()
+    while not strava_api.is_authed():
+        try:
+            strava_api.get_auth()
+        except StravaApi.AuthError as e:
+            if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
+                client_id, client_secret = strava_client_info_popup()
+                if client_id and client_secret:
+                    config.set("client_id", client_id)
+                    config.set("client_secret", client_secret)
+                else:
+                    break
+            elif e.err_type in [StravaApi.AuthError.ErrorType.HTTP_RESP,
+                                StravaApi.AuthError.ErrorType.TIMEOUT,
+                                StravaApi.AuthError.ErrorType.SCOPE]:
+                try_again = sg.PopupYesNo("Could not reach Strava. Try again?")
+                if try_again == "No":
+                    break
+            else:
+                raise e
 
 def workout_selection_popup(workout_path):
     '''
@@ -171,7 +193,7 @@ def settings_dialog_popup(config):
 
     # Initialize Strava link status:
     strava = StravaApi(config)
-    _set_strava_status(window, strava)
+    set_strava_status(window, strava)
 
     window.refresh()
 
@@ -202,26 +224,7 @@ def settings_dialog_popup(config):
             _set_workout_fields(window, new_workout_path)
             config.set("Workout", new_workout_path)
         if e == "-STRAVA-BTTN-":
-            strava.remove_auth()
-            while not strava.is_authed():
-                try:
-                    strava.get_auth()
-                except StravaApi.AuthError as e:
-                    if e.err_type == StravaApi.AuthError.ErrorType.CLIENT:
-                        client_id, client_secret = _strava_client_info_popup()
-                        if client_id and client_secret:
-                            config.set("client_id", client_id)
-                            config.set("client_secret", client_secret)
-                        else:
-                            break
-                    elif e.err_type in [StravaApi.AuthError.ErrorType.HTTP_RESP,
-                                        StravaApi.AuthError.ErrorType.TIMEOUT,
-                                        StravaApi.AuthError.ErrorType.SCOPE]:
-                        try_again = sg.PopupYesNo("Could not reach Strava. Try again?")
-                        if try_again == "No":
-                            break
-                    else:
-                        raise e
-            _set_strava_status(window, strava)
+            handle_strava_auth_button(strava)
+            set_strava_status(window, strava)
         else:
             print(e)

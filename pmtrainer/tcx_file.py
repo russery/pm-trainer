@@ -229,15 +229,30 @@ class Tcx():
         or updates them if already present.
         '''
         if total_time_s:
-            time_tag = self.current_lap.find("TotalTimeSeconds")
-            if not time_tag:
+            time_tag = self.current_lap.find("TotalTimeSeconds", "")
+            if time_tag is None:
                 time_tag = et.SubElement(self.current_lap, "TotalTimeSeconds")
             time_tag.text = str(total_time_s)
         if distance_m:
-            dist_tag = self.current_lap.find("DistanceMeters")
-            if not dist_tag:
+            dist_tag = self.current_lap.find("DistanceMeters", "")
+            if dist_tag is None:
                 dist_tag = et.SubElement(self.current_lap, "DistanceMeters")
             dist_tag.text = str(distance_m)
+
+    def get_lap_stats(self):
+        '''
+        Gets the total time and distance for the current lap if they are set.
+        '''
+        total_time_s = None
+        time_tag = self.current_lap.find("TotalTimeSeconds", "")
+        if time_tag is not None:
+            total_time_s = time_tag.text
+        distance_m = None
+        dist_tag = self.current_lap.find("DistanceMeters", "")
+        if dist_tag is not None:
+            distance_m = dist_tag.text
+
+        return total_time_s, distance_m
 
     def flush(self):
         '''
