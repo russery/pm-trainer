@@ -21,7 +21,7 @@ class StravaApi():
     TOKEN_URL = "https://www.strava.com/oauth/token"
     ATHLETE_URL = "https://www.strava.com/api/v3/athlete"
 
-    AUTH_SCOPE = ["activity:write"]
+    AUTH_SCOPE = ["activity:write", "activity:read_all"]
 
     SERVER_HOSTNAME = "localhost"
     SERVER_PORT = 8080
@@ -365,5 +365,5 @@ class StravaData():
             "gear_id": gear_id
         }
         resp = self.api.api_request(StravaData.ACTIVITY_URL+"/"+str(activity_id),
-                                   method="put", data=data, post_file=activity_file)
+                                   method="put", data=data)
         return resp

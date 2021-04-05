@@ -156,12 +156,13 @@ def _upload_activity(config, logfile, workout):
                   [sg.T("Distance", (24,1), key="-DIST-"),
                    sg.T("Time", (24,1), key="-TIME-")],
                   [sg.T("Activity Name:", (15,1)),
-                   sg.I(workout.name, text_color="gray", enable_events=True,
+                   sg.I(workout.name, text_color="gray",
                         size=(40,1), key="-NAME-", metadata="default")],
                   [sg.T("Description:", (15,1)),
-                   sg.I(workout.description, text_color="gray", enable_events=True,
+                   sg.I(workout.description, text_color="gray",
                         size=(40,1), key="-DESC-", metadata="default")]])],
-              [sg.B("Upload", key="-UPLOAD-", disabled=True), sg.B("Discard", key="-DISCARD-")]]
+              [sg.B("Upload", key="-UPLOAD-", bind_return_key=True, disabled=True),
+               sg.B("Discard", key="-DISCARD-")]]
     window = sg.Window("Upload Activity", layout=layout)
 
     window.finalize()
@@ -176,10 +177,15 @@ def _upload_activity(config, logfile, workout):
     window["-TIME-"].update("Time: {:4.0f} minutes".format(float(time_s)/60))
     window.refresh()
 
+    # Bind focus events on input boxes, to delete default value automatically for user
+    window["-NAME-"].bind("<FocusIn>", "")
+    window["-DESC-"].bind("<FocusIn>", "")
+
     while True:
         e, _ = window.read()
         if e in [sg.WIN_CLOSED, "-DISCARD-"]:
-            break
+            if sg.PopupYesNo("Really discard this activity?") == "Yes":
+                break
         elif e == "-STRAVA-BTTN-":
             handle_strava_auth_button(strava_api)
             config.write_settings(config.get("settingsfile"))
@@ -188,8 +194,7 @@ def _upload_activity(config, logfile, workout):
                 window["-UPLOAD-"].update(disabled=False)
         elif e in ["-NAME-", "-DESC-"]:
             if window[e].metadata == "default":
-                dft_text = window[e].get()
-                window[e].update(value=window[e].get().lstrip(dft_text),text_color="Black")
+                window[e].update(value="",text_color="White")
                 window[e].metadata = ""
         elif e == "-UPLOAD-":
             try:

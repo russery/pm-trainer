@@ -50,7 +50,8 @@ def strava_client_info_popup():
                sg.I("", (6,1), key="-CLIENT-ID-", focus=True, tooltip="client_id")],
               [sg.T("client_secret:", (15,1)),
                sg.I("", (41,1), key="-CLIENT-SECRET-", tooltip="client_secret")],
-              [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]]
+              [sg.B("Save", key="-SAVE-", bind_return_key=True),
+               sg.B("Cancel", key="-CANCEL-")]]
     window = sg.Window("Enter Strava Client Info", layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
 
@@ -123,7 +124,8 @@ def workout_selection_popup(workout_path):
                            enable_events=True)]])
                     ]])
         layout.extend([[frame]])
-    layout.extend([[sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]])
+    layout.extend([[sg.B("Save", key="-SAVE-", bind_return_key=True),
+                    sg.B("Cancel", key="-CANCEL-")]])
     window = sg.Window("Select a Workout", layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
 
@@ -183,7 +185,7 @@ def settings_dialog_popup(config):
              [sg.T("Local Log Path:"), sg.Input(log_directory, k="-LOGDIRECTORY-"),
               sg.FolderBrowse(button_text="Select", initial_folder=log_directory,
                               target="-LOGDIRECTORY-")]])],
-        [sg.B("Save", key="-SAVE-"),sg.B("Cancel", key="-CANCEL-")]
+        [sg.B("Save", key="-SAVE-", bind_return_key=True),sg.B("Cancel", key="-CANCEL-")]
     ]
     window = sg.Window("Settings", settings_layout,
         use_ttk_buttons=True, modal=True, keep_on_top=True, finalize=True, element_padding=(5,5))
