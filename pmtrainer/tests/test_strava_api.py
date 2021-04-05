@@ -33,7 +33,7 @@ class TestStravaApi(unittest.TestCase):
         self.assertIsNotNone(self.secrets.get("access_token_expire_time"))
         self.assertIsNotNone(self.secrets.get("refresh_token"))
         self.assertTrue(self.api.is_authed())
-        
+
     def test_no_secrets(self):
         client = self.secrets.get("client_id")
         self.secrets.delete("client_id")
@@ -91,10 +91,12 @@ class TestStravaApi(unittest.TestCase):
         self.assertTrue(new_expiry >= expected_expiry)
 
     def test_auth_timeout(self):
+        url_bak = StravaApi.AUTH_URL
         StravaApi.AUTH_URL = "fake url"
         with self.assertRaises(StravaApi.AuthError) as e:
             self.api.get_tokens()
         self.assertEqual(e.exception.err_type, StravaApi.AuthError.ErrorType.TIMEOUT)
+        StravaApi.AUTH_URL = url_bak
 
     def test_auth_scope(self):
         # Requires user interaction to pass... To do this correctly:
@@ -132,7 +134,7 @@ class TestStravaData(unittest.TestCase):
                 print("Couldn't authenticate with given client secrets. " \
                       "Check that they are correct.")
             raise e
-        self.strava_data = StravaData(self.api)  
+        self.strava_data = StravaData(self.api)
 
     def test_athlete_name(self):
         name = self.strava_data.get_athlete_name()
