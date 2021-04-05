@@ -1,20 +1,17 @@
 
 # PM Trainer
-This is a simple indoor bicycle training application, similar to a very stripped-down version of TrainerRoad or Zwift.
+![PM Trainer Main Dialog](screenshots/pm_trainer_main_window.png)
 
-It has the following major features:
+This is a simple indoor bicycle training application, similar to a very stripped-down version of TrainerRoad or Zwift with the following features:
 
 - Creates target-power workout profiles for the user to follow
 - Displays and logs ANT+ heartrate and power data
 - Uploads your workout to Strava
 
 # Installation Guide
-
 *TODO - dependencies installation*
 
-
 ## Quickstart:
-
 1. Configure [Strava API access](#strava-api-access) as described below (if you want automatic uploads)
 1. Plug in your ANT+ dongle and wake up your heartrate and power sensors
 1. Launch PM trainer: `python pm_trainer.py`
@@ -28,8 +25,6 @@ It has the following major features:
 1. When the workout is over, close PM Trainer, and you'll be prompted if you want to save your workout to Strava (if you've configured Strava API access).
 	- If you don't want to link your Strava account there will be a \*.tcx file in the log directory configured in the Settings dialog. You can manually upload this file to Strava.
 
-
-
 ## Strava API Access
 I expect each user to set up their own Strava API client, so to use the Strava integration there are a few annoying steps required:
 
@@ -40,15 +35,18 @@ I expect each user to set up their own Strava API client, so to use the Strava i
 	- Launch PM Trainer, click the Settings button (gear icon)
 	- Click the "Strava Connect" button in this dialog
 	- There will then be a popup window prompting you to enter these values. Enter them in the required fields, and then click "Save"
-1. That's all folks! At this point, PM Trainer will open a browser window requesting you to authenticate the app with Strava (standard Oauth2 workflow).
+1. **That's all folks!** At this point, PM Trainer will open a browser window requesting you to authenticate the app with Strava (standard Oauth2 workflow).
 
 ## Connecting Sensors
+If you have an ANT+ dongle connected when PM Trainer is launched, it will automatically select the first heartrate monitor and power meter that it sees. Note that this could cause issues if you have more than one of these active (e.g., two people wearing heartrate monitors in range).
 
+### Compatible Sensors and Dongles
+PM Trainer hasn't been tested with many different dongles or sensors, but here are ones it is known to work with:
 
-# Running and Using
-[] TODO
+Dongles:
 
-## Compatible Sensors and Dongles
+- [ANSELF USB ANT+ dongle](https://www.amazon.com/gp/product/B01M3VQP6Z/)
+- ~~[KINOEE USB ANT+ dongle](https://www.amazon.com/gp/product/B08DD2S6CK/)~~ - note that this dongle has been confirmed *not* to work with the USB and ANT+ libraries used by PM Trainer. Please don't try to use it.
 
 
 # Creating Workouts
