@@ -1,8 +1,8 @@
 import unittest
 import PySimpleGUI as sg
 import numpy as np
-from ..profile_plotter import plot_blocks, plot_trace
-from ..workout_profile import Workout
+from src.profile_plotter import plot_blocks, plot_trace
+from src.workout_profile import Workout
 
 class TestProfilePlotter(unittest.TestCase):
     def setUp(self):

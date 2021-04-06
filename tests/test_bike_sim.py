@@ -1,5 +1,5 @@
 import unittest
-from ..bike_sim import BikeSim
+from src.bike_sim import BikeSim
 
 class TestBikeSim(unittest.TestCase):
 

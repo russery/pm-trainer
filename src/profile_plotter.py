@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import numpy as np
-from . import workout_profile
+from workout_profile import get_zone
 
 ZONE_COLORS = ["gray", "blue", "green", "yellow", "orange", "red"]
 
@@ -34,7 +34,7 @@ def plot_blocks(graph, all_blocks, y_lims):
     max_width_px, max_height_px = graph.Size
     for block in all_blocks:
         width, start, end = block
-        zone = workout_profile.get_zone(np.average([start,end]))
+        zone = get_zone(np.average([start,end]))
         color = ZONE_COLORS[zone]
         # Scale X and Y to plot pixels
         startx_px = dur*max_width_px

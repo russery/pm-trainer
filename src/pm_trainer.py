@@ -26,16 +26,16 @@ import time
 import datetime as dt
 import PySimpleGUI as sg
 
-import pmtrainer.profile_plotter as profile_plotter
-import pmtrainer.settings as settings
-from pmtrainer.strava_api import StravaApi, StravaData
-from pmtrainer.ant_sensors import AntSensors
-import pmtrainer.assets.icons as icons
-from pmtrainer.workout_profile import Workout
-from pmtrainer.tcx_file import Tcx, Point
-from pmtrainer.bug_indicator import BugIndicator
-from pmtrainer.bike_sim import BikeSim
-from pmtrainer.settings_dialog import settings_dialog_popup, \
+import profile_plotter as profile_plotter
+import settings as settings
+from strava_api import StravaApi, StravaData
+from ant_sensors import AntSensors
+import assets.icons as icons
+from workout_profile import Workout
+from tcx_file import Tcx, Point
+from bug_indicator import BugIndicator
+from bike_sim import BikeSim
+from settings_dialog import settings_dialog_popup, \
                                       set_strava_status, handle_strava_auth_button
 
 

@@ -2,8 +2,8 @@ import unittest
 import os
 from datetime import datetime, timedelta, timezone
 from pprint import pprint
-from ..settings import Settings
-from ..strava_api import StravaApi, StravaData
+from src.settings import Settings
+from src.strava_api import StravaApi, StravaData
 
 class TestStravaApi(unittest.TestCase):
     def setUp(self):

@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+setup.cfg
+src/assets/__init__.py
+src/assets/icons.py
+src/assets/strava_auth_confirm_page.py
+src/pm_trainer.egg-info/PKG-INFO
+src/pm_trainer.egg-info/SOURCES.txt
+src/pm_trainer.egg-info/dependency_links.txt
+src/pm_trainer.egg-info/top_level.txt

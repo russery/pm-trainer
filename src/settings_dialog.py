@@ -19,9 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import PySimpleGUI as sg
-from pmtrainer.profile_plotter import plot_blocks
-from pmtrainer.workout_profile import Workout
-from pmtrainer.strava_api import StravaApi, StravaData
+from profile_plotter import plot_blocks
+from workout_profile import Workout
+from strava_api import StravaApi, StravaData
 
 def _validate_int_range(val, val_name, val_range, error_list):
     '''

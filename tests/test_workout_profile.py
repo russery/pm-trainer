@@ -1,6 +1,6 @@
 import unittest
 import os
-from ..workout_profile import Workout, get_zone
+from src.workout_profile import Workout, get_zone
 
 
 class TestWorkoutProfile(unittest.TestCase):
