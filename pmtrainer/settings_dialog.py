@@ -204,7 +204,7 @@ def settings_dialog_popup(config):
         if e in (sg.WIN_CLOSED, "-CANCEL-"):
             window.close()
             return
-        if e == "-SAVE-":
+        elif e == "-SAVE-":
             errors = []
             # Validate and save all values to config
             _validate_int_range(v["-FTP-"], "FTP Value", FTP_RANGE, errors)
@@ -221,11 +221,11 @@ def settings_dialog_popup(config):
                 config.set("LogDirectory", v["-LOGDIRECTORY-"])
                 window.close()
                 return
-        if e == "-WKT-SEL-BTTN-":
+        elif e == "-WKT-SEL-BTTN-":
             new_workout_path = workout_selection_popup(config.get("Workout"))
             _set_workout_fields(window, new_workout_path)
             config.set("Workout", new_workout_path)
-        if e == "-STRAVA-BTTN-":
+        elif e == "-STRAVA-BTTN-":
             handle_strava_auth_button(strava, config)
             set_strava_status(window, strava)
         else:
