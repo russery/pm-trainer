@@ -26,7 +26,7 @@ import time
 import subprocess
 import sys
 import requests
-from assets import strava_auth_confirm_page as auth_page
+from pmtrainer.assets.strava_auth_confirm_page import strava_auth_confirm_page as auth_page
 
 class StravaApi():
     """
