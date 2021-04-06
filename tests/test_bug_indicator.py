@@ -1,8 +1,7 @@
 import unittest
 import random
 import PySimpleGUI as sg
-from src.bug_indicator import BugIndicator
-
+from pmtrainer.bug_indicator import BugIndicator
 
 class TestBugIndicator(unittest.TestCase):
     def setUp(self):

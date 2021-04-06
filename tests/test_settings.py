@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import os
-from src.settings import Settings
+from pmtrainer.settings import Settings
 
 class TestSettings(unittest.TestCase):
     def setUp(self):

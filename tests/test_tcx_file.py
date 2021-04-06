@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import os
-from src.tcx_file import Tcx, Point
+from pmtrainer.tcx_file import Tcx, Point
 
 class TestTcxFile(unittest.TestCase):
     def setUp(self):

@@ -1,0 +1,8 @@
+include pyproject.toml
+
+include *.md
+include LICENSE.txt
+include setup.py
+
+# Include the sample workouts directory:
+graft workouts

@@ -1,8 +1,8 @@
 import os
 import tempfile
 import unittest
-from src.settings import Settings
-from src.settings_dialog import settings_dialog_popup, workout_selection_popup
+from pmtrainer.settings import Settings
+from pmtrainer.settings_dialog import settings_dialog_popup, workout_selection_popup
 
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
