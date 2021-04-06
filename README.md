@@ -71,7 +71,8 @@ blocks:
 Each "block" element defines a segment of the workout with either constant power, or a power ramp. If the `start` and `end` values are the same, desired power will be constant. Conversely, if these values are different, desired power will either increase or decrease across the segment. There are a few sample workouts in the [workouts](workouts/) folder. Note that the sum of the `duration` values across all blocks must be 1.0, or the workout will be rejected.
 
 Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings:
-<img src="screenshots/pm_trainer_workout_selection.png" width="200" >
+
+<img src="screenshots/pm_trainer_workout_selection.png" width="400" >
 
 TODO:
 
