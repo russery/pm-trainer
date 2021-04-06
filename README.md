@@ -26,7 +26,7 @@ This is a simple indoor bicycle training application, similar to a very stripped
 	- If you don't want to link your Strava account there will be a \*.tcx file in the log directory configured in the Settings dialog. You can manually upload this file to Strava.
 
 ## Strava API Access
-I expect each user to set up their own Strava API client, so to use the Strava integration there are a few annoying steps required:
+Each user is expected to set up their own Strava API client, so there are a few annoying steps required to use the Strava integration feature:
 
 1. Follow instructions on [Strava API Getting Started](https://developers.strava.com/docs/getting-started/) to configure an app. Briefly:
 	- Go to [Strava API Settings](https://www.strava.com/settings/api) in your Strava account, and fill out the required fields.
@@ -38,7 +38,7 @@ I expect each user to set up their own Strava API client, so to use the Strava i
 1. **That's all folks!** At this point, PM Trainer will open a browser window requesting you to authenticate the app with Strava (standard Oauth2 workflow).
 
 ## Connecting Sensors
-If you have an ANT+ dongle connected when PM Trainer is launched, it will automatically select the first heartrate monitor and power meter that it sees. Note that this could cause issues if you have more than one of these active (e.g., two people wearing heartrate monitors in range).
+If you have an ANT+ dongle connected when PM Trainer is launched, it will automatically select the first heartrate monitor and power meter that it sees. Note that this could cause issues if you have more than one of these active (e.g., if there are two people wearing heartrate monitors in range, it's uncertain which one will be picked up by PM Trainer). This will be fixed someday by Issue: https://github.com/russery/pm-trainer/issues/10.
 
 ### Compatible Sensors and Dongles
 PM Trainer hasn't been tested with many different dongles or sensors, but here are ones it is known to work with:
@@ -49,8 +49,29 @@ Dongles:
 - ~~[KINOEE USB ANT+ dongle](https://www.amazon.com/gp/product/B08DD2S6CK/)~~ - note that this dongle has been confirmed *not* to work with the USB and ANT+ libraries used by PM Trainer. Please don't try to use it.
 
 
+Sensors:
+
+- [Garmin HRM heartrate monitor strap](https://www.amazon.com/dp/B07N3C5WRG/)
+- [Stac Zero trainer powermeter](https://www.staczero.com/specs)
+
+Currently cadence sensors and erg-mode trainers are not supported, although it would be fairly easy to add support for them if needed.
+
 # Creating Workouts
-[] TODO
+Creating a new workout is as simple as creating a YAML file in the [workouts](workouts/) folder. The format of this file is:
+```
+name: <workout name goes here>
+description: <brief description of the workout>
+duration_s: <duration in seconds>
+blocks:
+  - duration: <duration as fraction of total workout>
+    start: <desired power at the beginning of the block as a fraction of FTP>
+    end: <desired power at the beginning of the block as a fraction of FTP>
+  - ... more blocks...
+```
+
+Each "block" element defines a segment of the workout with either constant power, or a power ramp. If the `start` and `end` values are the same, desired power will be constant. Conversely, if these values are different, desired power will either increase or decrease across the segment. There are a few sample workouts in the [workouts](workouts/) folder. Note that the sum of the `duration` values across all blocks must be 1.0, or the workout will be rejected.
+
+Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings.
 
 TODO:
 
