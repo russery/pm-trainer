@@ -48,7 +48,6 @@ Dongles:
 - [ANSELF USB ANT+ dongle](https://www.amazon.com/gp/product/B01M3VQP6Z/)
 - ~~[KINOEE USB ANT+ dongle](https://www.amazon.com/gp/product/B08DD2S6CK/)~~ - note that this dongle has been confirmed *not* to work with the USB and ANT+ libraries used by PM Trainer. Please don't try to use it.
 
-
 Sensors:
 
 - [Garmin HRM heartrate monitor strap](https://www.amazon.com/dp/B07N3C5WRG/)
@@ -71,7 +70,8 @@ blocks:
 
 Each "block" element defines a segment of the workout with either constant power, or a power ramp. If the `start` and `end` values are the same, desired power will be constant. Conversely, if these values are different, desired power will either increase or decrease across the segment. There are a few sample workouts in the [workouts](workouts/) folder. Note that the sum of the `duration` values across all blocks must be 1.0, or the workout will be rejected.
 
-Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings.
+Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings:
+![Workout Selection Dialog](screenshots/pm_trainer_workout_selection.png)
 
 TODO:
 
