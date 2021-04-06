@@ -1,7 +1,7 @@
 import unittest
 import tempfile
+import os
 from ..settings import Settings
-
 
 class TestSettings(unittest.TestCase):
     def setUp(self):
@@ -33,3 +33,27 @@ class TestSettings(unittest.TestCase):
         self.cfg.active_section = "New Section"
         self.assertEqual(self.cfg.active_section, name)
         self.assertEqual(self.cfg.get("setting"), "value")
+
+    def test_delete_key(self):
+        self.cfg.set("new_setting", "new_value")
+        val = self.cfg.get("new_setting")
+        self.assertEqual(val, "new_value")
+        self.cfg.delete("new_setting")
+        with self.assertRaises(KeyError):
+            self.cfg.get("new_setting")
+
+    def test_init_settings_with_file(self):
+        sample_file = os.path.dirname(__file__) + "/fixtures/sample_settings/default_settings.sampleini"
+        config = Settings(filename=sample_file)
+        with open(sample_file, "r") as f:
+            sample_config = f.read()
+        with tempfile.NamedTemporaryFile() as tmp_log:
+            config.write_settings(tmp_log.name)
+            with open(tmp_log.name, "r") as f:
+                written_config = f.read()
+            print("---")
+            print(sample_config)
+            print("---")
+            print(written_config)
+            print("---")
+            self.assertEqual(sample_config, written_config)

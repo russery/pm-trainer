@@ -27,7 +27,7 @@ class Workout():
         def __init__(self, message=""):
             super().__init__(message)
 
-    def __init__(self, workout_file):    
+    def __init__(self, workout_file):
         with open(workout_file) as f:
             self.workout = yaml.full_load(f)
 

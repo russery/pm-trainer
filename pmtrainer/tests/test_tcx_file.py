@@ -73,7 +73,7 @@ class TestTcxFile(unittest.TestCase):
 
     def test_open_file(self):
         # Read in a TCX file generated from a Strava activity
-        self.tcx.open_log(self.fixture_path + "Jon_s_Mix.tcx")
+        self.tcx.open_log(self.fixture_path + "20210325_160413.tcx")
         p = self.tcx.get_next_point()
         while p is not None:
             print(p)

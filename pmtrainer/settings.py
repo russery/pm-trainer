@@ -7,10 +7,14 @@ class Settings():
     '''
     Handles reading and writing settings from a file
     '''
-    def __init__(self):
+    def __init__(self, filename=None, defaults=None):
         self.config = cp.ConfigParser()
         self._active_section = "DEFAULT"
         self.config[self._active_section] = {}
+        if filename:
+            self.load_settings(filename=filename)
+        if defaults:
+            self.load_settings(defaults=defaults)
 
     def load_settings(self, filename=None, defaults=None):
         '''
@@ -18,10 +22,8 @@ class Settings():
         '''
         if filename:
             self.config.read(filename)
-            # TODO: Validate file format
         elif defaults:
             self.config.read_dict({"DEFAULT":defaults})
-
 
     def write_settings(self, filename):
         '''
@@ -42,10 +44,18 @@ class Settings():
         '''
         self.config[self.active_section][key] = value
 
-    def create_section(self, section, settings={}):
+    def delete(self, key):
+        '''
+        Remove a key from the config.
+        '''
+        self.config.remove_option(self.active_section, key)
+
+    def create_section(self, section, settings=None):
         '''
         Create a new section, optionally populating settings
         '''
+        if not settings:
+            settings = {} # Create an empty dict to pass in
         self.config[section] = settings
 
     @property

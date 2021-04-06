@@ -104,11 +104,10 @@ class BikeSim():
         Returns the bike+rider weight used for the sim.
         '''
         return self._weight_kg
-    
+
     @weight_kg.setter
     def weight_kg(self, weight_kg):
         '''
         Sets the combined bike+rider weight.
         '''
         self._weight_kg = weight_kg
-

@@ -1,7 +1,6 @@
 """
 Draws a workout power profile and plots traces on top of it.
 """
-import PySimpleGUI as sg
 import numpy as np
 from . import workout_profile
 
@@ -46,5 +45,3 @@ def plot_trace(graph, point, y_lims, size=2, color="red"):
     x_px = min(max_width_px, max(0, x_px)) # Saturate to plot limits
     y_px = min(max_height_px, max(0, y_px))
     graph.draw_point((x_px,y_px), size=size, color=color)
-
-            

@@ -5,3 +5,4 @@ bikeweightkg = 66
 workout = workouts/sweet_spot_short.yaml
 logdirectory = /tmp/
 settingsfile = test_pm_trainer_settings.ini
+
