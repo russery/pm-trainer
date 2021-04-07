@@ -38,7 +38,7 @@ from bike_sim import BikeSim
 from settings_dialog import settings_dialog_popup, \
                                       set_strava_status, handle_strava_auth_button
 
-DFT_PMTRAINER_DIR = "~/pm-trainer/"
+DFT_PMTRAINER_DIR = os.path.expanduser("~/pmtrainer/")
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -251,9 +251,12 @@ def _plot_trace(graph, val, y_lims, size=3, color='red'):
 # Load settings
 cfg = settings.Settings()
 if os.path.isfile(DEFAULT_SETTINGS["SettingsFile"]):
+    print("Loading config from file")
     cfg.load_settings(filename=DEFAULT_SETTINGS["SettingsFile"])
 else:
+    print("Loading default config")
     cfg.load_settings(defaults=DEFAULT_SETTINGS)
+    cfg.write_settings(filename=DEFAULT_SETTINGS["SettingsFile"])
 
 sg.theme("DarkBlack")
 
@@ -351,7 +354,9 @@ while True:
         if event == sg.WIN_CLOSED:
             if logfile:
                 logfile.flush()
-                _upload_activity(cfg, logfile, workout)
+                time_s, _ = logfile.get_lap_stats()
+                if time_s and time_s > 30:
+                    _upload_activity(cfg, logfile, workout)
             _exit_app()
         if event == "-SETTINGS-":
             settings_dialog_popup(cfg)
