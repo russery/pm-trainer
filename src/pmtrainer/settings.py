@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+from os import path
 import configparser as cp
 
 class Settings():
@@ -44,6 +45,9 @@ class Settings():
         '''
         Flush settings to a file
         '''
+        dirname = path.dirname(filename)
+        if not path.isdir(dirname):
+            path.mkdir(dirname)
         with open(filename, 'w') as configfile:
             self.config.write(configfile)
 

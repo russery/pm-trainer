@@ -101,12 +101,12 @@ class StravaApi():
             self.send_header("Content-type", "text/html")
             self.end_headers()
             if code and all(x in scopes for x in StravaApi.AUTH_SCOPE):
-                self.wfile.write(bytes(auth_page.strava_auth_confirm_page.format(
+                self.wfile.write(bytes(auth_page.format(
                     success_msg="You've successfully authenticated",
                     action_msg="Please close this window and return to PM Trainer"),
                     "utf-8"))
             else:
-                self.wfile.write(bytes(auth_page.strava_auth_confirm_page.format(
+                self.wfile.write(bytes(auth_page.format(
                     success_msg="Failed to authenticate",
                     action_msg="Please close this window, return to PM Trainer, and try again."),
                     "utf-8"))

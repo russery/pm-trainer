@@ -38,6 +38,7 @@ from bike_sim import BikeSim
 from settings_dialog import settings_dialog_popup, \
                                       set_strava_status, handle_strava_auth_button
 
+DFT_PMTRAINER_DIR = "~/pm-trainer/"
 
 DEFAULT_SETTINGS = {
    # User / session settings:
@@ -47,8 +48,8 @@ DEFAULT_SETTINGS = {
    "Workout": "workouts/short_stack.yaml",
 
    # Window / system settings
-   "LogDirectory": "./logs",
-   "SettingsFile": "pm_trainer_settings.ini",
+   "LogDirectory": DFT_PMTRAINER_DIR+"logs",
+   "SettingsFile": DFT_PMTRAINER_DIR+"pm_trainer_settings.ini",
 }
 
 PLOT_MARGINS_PERCENT = 10 # Percent of plot to show beyond limits

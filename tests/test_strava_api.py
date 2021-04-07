@@ -5,15 +5,17 @@ from pprint import pprint
 from pmtrainer.settings import Settings
 from pmtrainer.strava_api import StravaApi, StravaData
 
+CONFIG_PATH = os.path.expanduser("~/pmtrainer/pm_trainer_settings.ini")
+
 class TestStravaApi(unittest.TestCase):
     def setUp(self):
-        self.secrets = Settings("pm_trainer_settings.ini")
+        self.secrets = Settings(CONFIG_PATH)
         self.api = StravaApi(self.secrets)
         try:
             if not self.api.is_authed():
                 print("Not authenticated.... going for auth")
                 self.api.get_auth()
-                self.secrets.write_settings(self.secrets.get("settingsfile"))
+                self.secrets.write_settings(CONFIG_PATH)
             else:
                 print("Using cached auth token.")
         except StravaApi.AuthError as e:
@@ -115,15 +117,13 @@ class TestStravaApi(unittest.TestCase):
 
 class TestStravaData(unittest.TestCase):
     def setUp(self):
-        secrets_file = "pm_trainer_settings.ini"
-        self.secrets = Settings()
-        self.secrets.load_settings(secrets_file)
+        self.secrets = Settings(CONFIG_PATH)
         self.api = StravaApi(self.secrets)
         try:
             if not self.api.is_authed():
                 print("Not authenticated.... going for auth")
                 self.api.get_auth()
-                self.secrets.write_settings(secrets_file)
+                self.secrets.write_settings(CONFIG_PATH)
             else:
                 print("Using cached auth token")
         except StravaApi.AuthError as e:
