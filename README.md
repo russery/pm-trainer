@@ -1,6 +1,6 @@
 
 # PM Trainer
-![PM Trainer Main Dialog](screenshots/pm_trainer_main_window.png)
+![PM Trainer Main Dialog](https://github.com/russery/pm-trainer/screenshots/pm_trainer_main_window.png)
 
 This is a simple indoor bicycle training application, similar to a very stripped-down version of TrainerRoad or Zwift with the following features:
 
@@ -38,7 +38,7 @@ Each user is expected to set up their own Strava API client, so there are a few 
 1. **That's all folks!** At this point, PM Trainer will open a browser window requesting you to authenticate the app with Strava (standard Oauth2 workflow).
 
 ## Connecting Sensors
-If you have an ANT+ dongle connected when PM Trainer is launched, it will automatically select the first heartrate monitor and power meter that it sees. Note that this could cause issues if you have more than one of these active (e.g., if there are two people wearing heartrate monitors in range, it's uncertain which one will be picked up by PM Trainer). This will be fixed someday by Issue: https://github.com/russery/pm-trainer/issues/10.
+If you have an ANT+ dongle connected when PM Trainer is launched, it will automatically select the first heartrate monitor and power meter that it sees. Note that this could cause issues if you have more than one of these active (e.g., if there are two people wearing heartrate monitors in range, it's uncertain which one will be picked up by PM Trainer). This will be fixed someday by [Issue #10](https://github.com/russery/pm-trainer/issues/10).
 
 ### Compatible Sensors and Dongles
 PM Trainer hasn't been tested with many different dongles or sensors, but here are ones it is known to work with:
@@ -72,4 +72,4 @@ Each "block" element defines a segment of the workout with either constant power
 
 Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings:
 
-<img src="screenshots/pm_trainer_workout_selection.png" width="400" >
+<img src="https://github.com/russery/pm-trainer/screenshots/pm_trainer_workout_selection.png" width="400" >

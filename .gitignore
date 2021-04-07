@@ -2,8 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 .eggs/
+*egg-info*
 build/
 dist/
 logs/
 *.ini
 .coverage
+.tox
