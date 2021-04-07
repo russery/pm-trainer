@@ -1,6 +1,6 @@
 
 # PM Trainer
-![PM Trainer Main Dialog](https://github.com/russery/pm-trainer/screenshots/pm_trainer_main_window.png)
+![PM Trainer Main Dialog](screenshots/pm_trainer_main_window.png)
 
 This is a simple indoor bicycle training application, similar to a very stripped-down version of TrainerRoad or Zwift with the following features:
 
@@ -9,12 +9,17 @@ This is a simple indoor bicycle training application, similar to a very stripped
 - Uploads your workout to Strava
 
 # Installation Guide
-*TODO - dependencies installation*
+Installation is still a bit janky due to a number of dependencies. For now, this should work, but YMMV
+
+1. Download the repo (either as a zip or via git clone)
+2. Run `pip install msgpack` - this shouldn't be required, but for some reason python setuptools chokes on it.
+3. Install `libusb`. Note that on MacOS Catalina, I've found that only the Homebrew version works (the ones on pip and Macports do not work). If you have Homebrew installed, run `brew install libusb`.
+4. From the root of the downloaded files, run `python setup.py install`. This should install all the other dependencies needed.
 
 ## Quickstart:
 1. Configure [Strava API access](#strava-api-access) as described below (if you want automatic uploads)
 1. Plug in your ANT+ dongle and wake up your heartrate and power sensors
-1. Launch PM trainer: `python pm_trainer.py`
+1. Launch PM trainer: `python src/pmtrainer/pm_trainer.py`
 	- Your ANT+ dongle and sensors should automatically be detected.
 1. Select a workout:
 	- Click the gear icon (settings)
@@ -72,4 +77,4 @@ Each "block" element defines a segment of the workout with either constant power
 
 Once you've created the workout in this folder, launch PM Trainer and the workout will now show up in the workout selection dialog under Settings:
 
-<img src="https://github.com/russery/pm-trainer/screenshots/pm_trainer_workout_selection.png" width="400" >
+<img src="screenshots/pm_trainer_workout_selection.png" width="400" >
