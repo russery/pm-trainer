@@ -355,7 +355,7 @@ while True:
             if logfile:
                 logfile.flush()
                 time_s, _ = logfile.get_lap_stats()
-                if time_s and time_s > 30:
+                if time_s and float(time_s) > 30:
                     _upload_activity(cfg, logfile, workout)
             _exit_app()
         if event == "-SETTINGS-":

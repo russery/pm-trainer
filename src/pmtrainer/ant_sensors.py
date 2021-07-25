@@ -214,7 +214,7 @@ class AntSensors():
             self._hr_event_time_ms = event_time_ms
             self._heart_rate_status.make_fresh()
 
-    def _on_power_data(self, event_count, _, __, cadence_rpm,
+    def _on_power_data(self, event_count, _, cadence_rpm,
                        accumulated_power_watts, instantaneous_power_watts):
         self._instantaneous_power_watts = instantaneous_power_watts
         self._cadence_rpm = cadence_rpm
